@@ -1,6 +1,6 @@
 /* ==================================================
    CPU DEFENDER - ENTITIES
-   (Actualizado para escuchar al Mando/Joystick)
+   (Físicas ajustadas: Control preciso y frenado rápido)
    ================================================== */
 
 class CpuBase {
@@ -36,32 +36,60 @@ class PlayerTank {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.speed = 5;
+    
+    // === FÍSICAS "ARCADE PRECISO" ===
+    this.vx = 0; 
+    this.vy = 0; 
+    
+    // Ajustes para evitar el "efecto hielo":
+    this.maxSpeed = 7;       // Velocidad tope ágil
+    this.acceleration = 2.0; // Respuesta inmediata al mover la palanca
+    this.friction = 0.70;    // Frenado fuerte (0.70 retiene menos velocidad que 0.85)
   }
 
   update(keys, w, h) {
-    // AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
-    // Agregamos || keys['gp_up'] para que escuche al mando
-    
-    // Arriba
-    if (keys['w'] || keys['arrowup'] || keys['gp_up']) { 
-        this.y -= this.speed;
-    }
-    // Abajo
-    if (keys['s'] || keys['arrowdown'] || keys['gp_down']) {
-        this.y += this.speed;
-    }
-    // Izquierda
-    if (keys['a'] || keys['arrowleft'] || keys['gp_left']) {
-        this.x -= this.speed;
-    }
-    // Derecha
-    if (keys['d'] || keys['arrowright'] || keys['gp_right']) {
-        this.x += this.speed;
+    // 1. ACELERACIÓN (Fuerza de movimiento)
+    // Si detectamos input, aplicamos fuerza en esa dirección
+    let inputX = 0;
+    let inputY = 0;
+
+    if (keys['w'] || keys['arrowup'] || keys['gp_up'])    inputY = -1;
+    if (keys['s'] || keys['arrowdown'] || keys['gp_down'])  inputY = 1;
+    if (keys['a'] || keys['arrowleft'] || keys['gp_left'])  inputX = -1;
+    if (keys['d'] || keys['arrowright'] || keys['gp_right']) inputX = 1;
+
+    // Aplicar aceleración
+    if (inputX !== 0) this.vx += inputX * this.acceleration;
+    if (inputY !== 0) this.vy += inputY * this.acceleration;
+
+    // 2. FRICCIÓN (Frenado)
+    // Si NO hay input, la fricción actúa más fuerte para detenerte rápido
+    // Si HAY input, la fricción evita que aceleres infinitamente
+    this.vx *= this.friction;
+    this.vy *= this.friction;
+
+    // 3. LIMITAR VELOCIDAD (Clamping)
+    const currentSpeed = Math.hypot(this.vx, this.vy);
+    if (currentSpeed > this.maxSpeed) {
+        // Normalizar y escalar a maxSpeed
+        const scale = this.maxSpeed / currentSpeed;
+        this.vx *= scale;
+        this.vy *= scale;
     }
 
-    this.x = Math.max(25, Math.min(w - 25, this.x));
-    this.y = Math.max(100, Math.min(h - 170, this.y));
+    // 4. STOP TOTAL (Evitar micro-deslizamiento final)
+    if (Math.abs(this.vx) < 0.1) this.vx = 0;
+    if (Math.abs(this.vy) < 0.1) this.vy = 0;
+
+    // 5. ACTUALIZAR POSICIÓN
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // 6. LÍMITES DE PANTALLA (Rebote suave opcional, aquí es tope seco)
+    if (this.x < 25) { this.x = 25; this.vx = 0; }
+    if (this.x > w - 25) { this.x = w - 25; this.vx = 0; }
+    if (this.y < 100) { this.y = 100; this.vy = 0; }
+    if (this.y > h - 170) { this.y = h - 170; this.vy = 0; }
   }
 
   shoot(game) {

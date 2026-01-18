@@ -46,7 +46,7 @@ function startCpuDefender() {
   gameArea.appendChild(canvas);
   gameArea.appendChild(ui);
 
-  // Forzamos el foco al canvas para que las teclas las reciba el juego y no los botones de la UI anterior
+  // Forzamos el foco al canvas para que las teclas las reciba el juego
   canvas.focus();
 
   // Instancia del juego (global para toggle ML)
@@ -56,7 +56,7 @@ function startCpuDefender() {
   const btnRepair = document.getElementById('btn-repair');
   if (btnRepair) btnRepair.onclick = () => window.activeCpuGameInstance.repairCpu();
   
-  // Si el usuario hace clic fuera y vuelve, asegurar que el canvas recupere el foco al hacer clic en él
+  // Si el usuario hace clic fuera y vuelve, asegurar que el canvas recupere el foco
   canvas.addEventListener('click', () => {
       canvas.focus();
   });
@@ -106,9 +106,9 @@ class CpuGame {
     // alerta ammo bajo
     this.lowAmmoWarned = false;
 
-    // ===== Parámetros Ruta A =====
+    // ===== Parámetros Ruta A (AJUSTADO PARA MEJOR PROGRESIÓN) =====
     this.AI_EMA_ALPHA = 0.20;
-    this.AI_UP_TH = 0.72;
+    this.AI_UP_TH = 0.50;     // ANTES 0.72. Bajado para subir nivel más fácil.
     this.AI_DOWN_TH = 0.78;
     this.AI_NORMAL_LOCK = 0.55;
     this.AI_COOLDOWN_SEC = 4;
@@ -144,12 +144,13 @@ class CpuGame {
     this.enemySpawnRate = 120;
     this.shootCooldown = 0;
 
-    // Control para evitar spam de botón REPAIR en mando
+    // Control para evitar spam de botones en mando
     this.gamepadRepairLocked = false;
+    this.gamepadAiToggleLocked = false; // NUEVO: Bloqueo para el botón de IA
 
     // Inputs de Teclado
     this.handleKeyDown = (e) => {
-      // SOLUCIÓN 2: Prevenir comportamiento por defecto para teclas de juego
+      // Prevenir comportamiento por defecto
       if([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
           e.preventDefault();
       }
@@ -208,6 +209,10 @@ class CpuGame {
 
   async setMLMode(active) {
     this.mlModeActive = active;
+    
+    // Actualizar también el switch visual si existe
+    const toggleBtn = document.getElementById('mlToggle');
+    if(toggleBtn) toggleBtn.checked = active;
 
     if (active) {
       this.introSequence = true;
@@ -309,7 +314,7 @@ class CpuGame {
     if (this.shootCooldown > 0) this.shootCooldown--;
 
     // ==========================================
-    //  LÓGICA GAMEPAD (CORREGIDA)
+    //  LÓGICA GAMEPAD (ARCADE STICK / MANDO)
     // ==========================================
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
     const gp = gamepads[0]; // Tomamos el primer mando
@@ -336,13 +341,22 @@ class CpuGame {
         }
       }
 
-      // 3. REPARAR
-      const btnRepair = gp.buttons[1]?.pressed || gp.buttons[2]?.pressed || gp.buttons[3]?.pressed; 
+      // 3. REPARAR (Botones 1, 2, 3)
+      const btnRepair = gp.buttons[1]?.pressed || gp.buttons[2]?.pressed || gp.buttons[3]?.pressed;
       if (btnRepair && !this.gamepadRepairLocked) {
         this.repairCpu();
         this.gamepadRepairLocked = true;
       } else if (!btnRepair) {
         this.gamepadRepairLocked = false;
+      }
+
+      // 4. TOGGLE IA (NUEVO: Botón 4 o Botón 8/Select)
+      const btnToggle = gp.buttons[4]?.pressed || gp.buttons[8]?.pressed;
+      if (btnToggle && !this.gamepadAiToggleLocked) {
+        this.setMLMode(!this.mlModeActive);
+        this.gamepadAiToggleLocked = true;
+      } else if (!btnToggle) {
+        this.gamepadAiToggleLocked = false;
       }
     }
 
