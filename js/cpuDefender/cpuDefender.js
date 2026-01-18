@@ -150,7 +150,6 @@ class CpuGame {
     // Inputs de Teclado
     this.handleKeyDown = (e) => {
       // SOLUCIÓN 2: Prevenir comportamiento por defecto para teclas de juego
-      // Esto evita que Espacio presione botones o haga scroll, y que las flechas muevan la página
       if([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
           e.preventDefault();
       }
@@ -310,7 +309,7 @@ class CpuGame {
     if (this.shootCooldown > 0) this.shootCooldown--;
 
     // ==========================================
-    //  LÓGICA GAMEPAD (ARCADE STICK / MANDO)
+    //  LÓGICA GAMEPAD (CORREGIDA)
     // ==========================================
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
     const gp = gamepads[0]; // Tomamos el primer mando
@@ -318,13 +317,16 @@ class CpuGame {
     let activeInput = { ...this.keys };
 
     if (gp) {
-      // Movimiento
+      // 1. MOVIMIENTO (Palanca / Ejes)
+      // Eje 1 (Vertical): -1 es Arriba, 1 es Abajo
       if (gp.axes[1] < -0.5) activeInput['gp_up'] = true;
       if (gp.axes[1] > 0.5)  activeInput['gp_down'] = true;
+
+      // Eje 0 (Horizontal): -1 es Izquierda, 1 es Derecha
       if (gp.axes[0] < -0.5) activeInput['gp_left'] = true;
       if (gp.axes[0] > 0.5)  activeInput['gp_right'] = true;
 
-      // Disparo
+      // 2. DISPARO
       if (gp.buttons[0].pressed) {
         if (this.shootCooldown <= 0 && this.ammo > 0) {
           this.player.shoot(this);
@@ -334,8 +336,8 @@ class CpuGame {
         }
       }
 
-      // Reparar
-      const btnRepair = gp.buttons[1]?.pressed || gp.buttons[2]?.pressed || gp.buttons[3]?.pressed;
+      // 3. REPARAR
+      const btnRepair = gp.buttons[1]?.pressed || gp.buttons[2]?.pressed || gp.buttons[3]?.pressed; 
       if (btnRepair && !this.gamepadRepairLocked) {
         this.repairCpu();
         this.gamepadRepairLocked = true;

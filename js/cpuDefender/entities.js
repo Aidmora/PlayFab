@@ -1,6 +1,6 @@
 /* ==================================================
    CPU DEFENDER - ENTITIES
-   (Copiado 1:1 del app.js original)
+   (Actualizado para escuchar al Mando/Joystick)
    ================================================== */
 
 class CpuBase {
@@ -40,10 +40,25 @@ class PlayerTank {
   }
 
   update(keys, w, h) {
-    if (keys['w'] || keys['arrowup']) this.y -= this.speed;
-    if (keys['s'] || keys['arrowdown']) this.y += this.speed;
-    if (keys['a'] || keys['arrowleft']) this.x -= this.speed;
-    if (keys['d'] || keys['arrowright']) this.x += this.speed;
+    // AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
+    // Agregamos || keys['gp_up'] para que escuche al mando
+    
+    // Arriba
+    if (keys['w'] || keys['arrowup'] || keys['gp_up']) { 
+        this.y -= this.speed;
+    }
+    // Abajo
+    if (keys['s'] || keys['arrowdown'] || keys['gp_down']) {
+        this.y += this.speed;
+    }
+    // Izquierda
+    if (keys['a'] || keys['arrowleft'] || keys['gp_left']) {
+        this.x -= this.speed;
+    }
+    // Derecha
+    if (keys['d'] || keys['arrowright'] || keys['gp_right']) {
+        this.x += this.speed;
+    }
 
     this.x = Math.max(25, Math.min(w - 25, this.x));
     this.y = Math.max(100, Math.min(h - 170, this.y));
@@ -260,7 +275,7 @@ class Particle {
   }
 }
 
-/* Exponer en window para uso desde cpuDefender.js (scripts sin modules) */
+// Exponer global
 window.CpuBase = CpuBase;
 window.PlayerTank = PlayerTank;
 window.Bullet = Bullet;
