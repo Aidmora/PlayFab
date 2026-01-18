@@ -1,0 +1,180 @@
+/* =========================
+   CPU DEFENDER - UI / IA
+   (extraído 1:1 de styles.css)
+   ========================= */
+
+/* CPU UI */
+.ui-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+.hud-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  pointer-events: all;
+}
+
+.btn-cpu {
+  background: #444;
+  border: 2px solid #fff;
+  color: white;
+  padding: 8px 15px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cpu-game-over-msg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px 40px;
+  text-align: center;
+  border: 2px solid red;
+  color: white;
+  z-index: 20;
+}
+
+/* ML TOGGLE & ALERTS */
+.ml-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ml-label {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  font-family: 'Press Start 2P', cursive;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #444;
+  transition: .4s;
+  border: 2px solid #666;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* RED OVERLAY ALERT */
+.challenge-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(255, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.challenge-overlay h1 {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 2rem;
+  color: #fff;
+  text-shadow: 4px 4px 0 #ff0000;
+  text-align: center;
+}
+
+.challenge-overlay p {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #ffff00;
+  background: #000;
+  padding: 5px 10px;
+  border: 2px solid #ffff00;
+  text-align: center;
+}
+
+/* SPINNER */
+.spinner {
+  border: 8px solid #333;
+  border-top: 8px solid #00ff00;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* HUD IA */
+.ai-status-hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-family: 'Courier Prime', monospace;
+  font-weight: bold;
+  color: #00ff00;
+  font-size: 1rem;
+  text-shadow: 0 0 5px #00ff00;
+  background: rgba(0, 20, 0, 0.8);
+  padding: 10px;
+  border: 1px solid #00ff00;
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ai-status-hud small {
+  font-size: 0.6rem;
+  color: #aaffaa;
+  opacity: 0.8;
+}

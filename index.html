@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayFab Arcade - CpuDefender Edition</title>
+
+  <!-- TensorFlow -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet" />
+
+  <!-- CSS (modular) -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/pong.css" />
+  <link rel="stylesheet" href="css/snake.css" />
+  <link rel="stylesheet" href="css/cpuDefender.css" />
+  <link rel="stylesheet" href="css/tutorial.css" />
+</head>
+
+<body>
+  <audio id="bg-music" src="audios/Rick Dangerous - Rick Dangerous.mp3" autoplay loop></audio>
+
+  <div class="side-decoration left">
+    <div class="neon-owl">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <path class="owl-body" d="M50,60 Q20,180 100,180 Q180,180 150,60 Q100,10 50,60 Z" fill="none" stroke="#00ff41" stroke-width="4"/>
+        <circle class="owl-eye" cx="70" cy="80" r="15" fill="none" stroke="#ff7b00" stroke-width="3"/>
+        <circle class="owl-eye" cx="130" cy="80" r="15" fill="none" stroke="#ff7b00" stroke-width="3"/>
+        <path class="owl-beak" d="M90,100 L110,100 L100,120 Z" fill="none" stroke="#ccff00" stroke-width="3"/>
+        <path class="owl-wing" d="M40,100 Q10,130 40,160" fill="none" stroke="#00ff41" stroke-width="3"/>
+        <path class="owl-wing" d="M160,100 Q190,130 160,160" fill="none" stroke="#00ff41" stroke-width="3"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="arcade-cabinet">
+    <header>
+      <h1>PLAYFAB</h1>
+    </header>
+
+    <div class="category-switch">
+      <button class="cat-btn active" onclick="switchCategory('minigames', this)">MINIJUEGOS</button>
+      <button class="cat-btn" onclick="switchCategory('pro', this)">ARCADE PRO</button>
+    </div>
+
+    <div class="screen-container">
+      <div class="game-display active-list" id="list-minigames">
+        <div class="game-card">
+          <img src="Images/ping pong.png" alt="Ping Pong" />
+          <h3>PING PONG CLASSIC</h3>
+        </div>
+        <div class="game-card">
+          <img src="Images/snake.png" alt="Snake" />
+          <h3>SNAKE RETRO</h3>
+        </div>
+        <div class="game-card">
+          <img src="Images/cpu_defender.png" alt="Cpu Defender" />
+          <h3>CPU DEFENDER</h3>
+        </div>
+      </div>
+
+      <div class="game-display" id="list-pro">
+        <div class="game-card">
+          <img src="https://images.unsplash.com/photo-1551103782-8ab07afd45c1?auto=format&fit=crop&q=80&w=400" alt="Street Fighter" />
+          <h3>STREET FIGHTER II</h3>
+        </div>
+        <div class="game-card">
+          <img src="https://images.unsplash.com/photo-1534423861386-85a16f5d13fd?auto=format&fit=crop&q=80&w=400" alt="Metal Slug" />
+          <h3>METAL SLUG</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <button class="btn-side" id="prevBtn">◀</button>
+      <button class="btn-play" id="playBtn">JUGAR</button>
+      <button class="btn-side" id="nextBtn">▶</button>
+      <button class="btn-help" id="helpBtn" title="Ver Tutorial">?</button>
+    </div>
+  </div>
+
+  <div class="side-decoration right">
+    <div class="neon-text-container">
+      <h2 class="neon-epn">EPN</h2>
+      <p class="neon-sub">POLITÉCNICA</p>
+    </div>
+  </div>
+
+  <div id="game-overlay" class="game-overlay">
+    <div class="game-container">
+      <div class="game-header">
+        <h3 id="game-title">JUGANDO...</h3>
+
+        <div class="ml-switch-container">
+          <span class="ml-label">MODO IA</span>
+          <label class="switch">
+            <input type="checkbox" id="mlToggle" onchange="toggleMLMode()" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <button class="btn-close" onclick="closeMinigame()">✕</button>
+      </div>
+
+      <div class="game-area" id="game-area" style="position: relative;">
+        <div id="challenge-announcement" class="challenge-overlay" style="display: none;">
+          <h1 class="glitch-text" id="announcement-title">ACELERACIÓN DEL CPU</h1>
+          <p id="announcement-subtitle">DIFICULTAD DE IA HABILITADA</p>
+        </div>
+
+        <div id="ai-loading" class="challenge-overlay" style="display: none; background: #000; z-index: 200;">
+          <div class="spinner"></div>
+          <p
+            id="loading-text"
+            style="margin-top: 20px; color: #00ff41; font-family: 'Courier Prime'; text-align:center; text-shadow: 0 0 10px #00ff41; font-size: 1rem;"
+          >
+            INICIANDO...
+          </p>
+        </div>
+      </div>
+
+      <div class="game-footer">
+        <span id="game-score">PUNTUACIÓN: 0000</span>
+        <span id="game-info">USA TECLADO Y MOUSE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TUTORIAL OVERLAY -->
+  <div id="tutorial-overlay" class="tutorial-overlay">
+    <div class="tutorial-content">
+      <div class="tutorial-header">
+        <h2>INSTRUCCIONES DE JUEGO</h2>
+        <button class="btn-close-tutorial" onclick="closeTutorial()">✕</button>
+      </div>
+
+      <div class="tutorial-body">
+        <div class="control-column">
+          <h3>🖥️ MODO PC</h3>
+
+          <div class="game-guide">
+            <h4><img src="Images/ping pong.png" onerror="this.style.display='none'"> PING PONG</h4>
+            <p><strong>Control:</strong> Mueve el <span class="key-highlight">MOUSE</span> arriba/abajo.</p>
+          </div>
+
+          <div class="game-guide">
+            <h4><img src="Images/snake.png" onerror="this.style.display='none'"> SNAKE</h4>
+            <p><strong>Control:</strong> Flechas <span class="key-highlight">⬆ ⬇ ⬅ ➡</span></p>
+          </div>
+
+          <div class="game-guide">
+            <h4><img src="Images/cpu_defender.png" onerror="this.style.display='none'"> CPU DEFENDER</h4>
+            <p><strong>Reparar:</strong> tecla "Q"</p>
+            <p><strong>Disparar:</strong> tecla "espacio"</p>
+            <p><strong>Control:</strong> Flechas <span class="key-highlight">⬆ ⬇ ⬅ ➡</span></p>
+          </div>
+        </div>
+
+        <div class="control-column arcade-column">
+          <h3>🕹️ MODO ARCADE</h3>
+          <p class="subtitle">Configuración Joystick Casero</p>
+
+          <div class="joystick-visual">
+            <div class="stick-part">
+              <div class="stick-ball">PALANCA</div>
+              <span class="label-func">Mover / Apuntar</span>
+            </div>
+
+            <div class="buttons-part">
+              <div class="btn-top">A</div>
+              <div class="btn-mid-row">
+                <div class="btn-left">B</div>
+                <div class="btn-right">—</div>
+              </div>
+              <div class="btn-right">—</div>
+              <span class="label-func">Acciones</span>
+            </div>
+          </div>
+
+          <!-- Ajustado para CPU DEFENDER -->
+          <div class="arcade-legend">
+            <ul>
+              <li><strong>Palanca:</strong> Mover / Apuntar</li>
+              <li><strong>Botón A:</strong> Disparar</li>
+              <li><strong>Botón B:</strong> Curar</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS (modular) -->
+  <script src="js/tutorial.js"></script>
+  <script src="js/utils.js"></script>
+
+  <!-- Juegos -->
+  <script src="js/snake/snake.js"></script>
+  <script src="js/pong/pong.js"></script>
+
+  <!-- CPU Defender -->
+  <script src="js/cpuDefender/ai.js"></script>
+  <script src="js/cpuDefender/entities.js"></script>
+  <script src="js/cpuDefender/ui.js"></script>
+  <script src="js/cpuDefender/cpuDefender.js"></script>
+
+  <!-- Global / Navegación -->
+  <script src="js/main.js"></script>
+</body>
+</html>
