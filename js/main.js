@@ -131,3 +131,21 @@ window.closeMinigame = function () {
   document.getElementById('game-area').innerHTML = '';
   document.getElementById('game-overlay').classList.remove('active');
 };
+
+
+// ---- AUDIO ARCADE ----
+document.addEventListener("click", () => {
+    audioManager.playOnce();
+}, { once: true });
+const muteBtn = document.getElementById("muteBtn");
+
+// Estado inicial
+if (audioManager.isMuted) {
+  muteBtn.classList.add("muted");
+}
+
+muteBtn.addEventListener("click", () => {
+  const muted = audioManager.toggleMute();
+  muteBtn.classList.toggle("muted", muted);
+});
+

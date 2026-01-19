@@ -19,11 +19,10 @@
   <link rel="stylesheet" href="css/snake.css" />
   <link rel="stylesheet" href="css/cpuDefender.css" />
   <link rel="stylesheet" href="css/tutorial.css" />
+  <link rel="stylesheet" href="css/audioManager.css" />
 </head>
 
-<body>
-  <audio id="bg-music" src="audios/Rick Dangerous - Rick Dangerous.mp3" autoplay loop></audio>
-
+<body> 
   <div class="side-decoration left">
     <div class="neon-owl">
       <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
@@ -80,6 +79,7 @@
       <button class="btn-play" id="playBtn">JUGAR</button>
       <button class="btn-side" id="nextBtn">▶</button>
       <button class="btn-help" id="helpBtn" title="Ver Tutorial">?</button>
+      <button class="mute-btn" id="muteBtn" aria-label="Mute música"></button>
     </div>
   </div>
 
@@ -207,6 +207,9 @@
   <script src="js/cpuDefender/entities.js"></script>
   <script src="js/cpuDefender/ui.js"></script>
   <script src="js/cpuDefender/cpuDefender.js"></script>
+
+   <!-- AUDIO -->
+  <script src="js/audioManager.js"></script>
 
   <!-- Global / Navegación -->
   <script src="js/main.js"></script>

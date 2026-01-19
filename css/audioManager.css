@@ -1,0 +1,69 @@
+/* =========================
+   MUSIC BUTTON (ARCADE STYLE)
+   ========================= */
+
+.mute-btn {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+
+  font-family: 'Press Start 2P', cursive;
+  font-size: 1rem;
+  color: #000;
+
+  /* 🟠 ACTIVO */
+  background: radial-gradient(circle at 30% 30%, #ff47b2, #ff0077);
+
+  box-shadow:
+    0 5px 0 #cc00bb,
+    0 10px 10px rgba(0,0,0,0.5),
+    inset 0 0 10px rgba(255,255,255,0.35);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+/* Icono música ON */
+.mute-btn::before {
+  content: "🔊";
+}
+
+/* Click físico */
+.mute-btn:active {
+  transform: translateY(5px);
+  box-shadow:
+    0 0 0 #cc5e00,
+    0 2px 5px rgba(0,0,0,0.5),
+    inset 0 0 5px rgba(0,0,0,0.5);
+}
+
+/* =========================
+   MUTE STATE
+   ========================= */
+
+.mute-btn.muted {
+  color: #fff;
+
+  background: radial-gradient(circle at 30% 30%, #ff6b7a, #b8001f);
+
+  box-shadow:
+    0 5px 0 #7a0013,
+    0 10px 10px rgba(0,0,0,0.5),
+    inset 0 0 10px rgba(255,255,255,0.25);
+}
+
+.mute-btn.muted::before {
+  content: "🔇";
+}
+
+.mute-btn.muted:active {
+  box-shadow:
+    0 0 0 #7a0013,
+    0 2px 5px rgba(0,0,0,0.5),
+    inset 0 0 5px rgba(0,0,0,0.5);
+}
