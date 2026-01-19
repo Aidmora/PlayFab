@@ -149,3 +149,42 @@ muteBtn.addEventListener("click", () => {
   muteBtn.classList.toggle("muted", muted);
 });
 
+
+
+// ---- CARGADOR RETRO ----
+window.addEventListener("load", () => {
+    const loader = document.getElementById("retro-loader");
+
+    const MIN_LOADING_TIME = 2500; // Tiempo mínimo de carga en ms
+    const start = performance.now();
+
+    const finishLoading = () => {
+        loader.style.transition = "opacity 1.5s ease";
+        loader.style.opacity = 0;
+
+        setTimeout(() => {
+            loader.remove();
+            audioManager?.playOnce();
+        }, 1500);
+    };
+
+    const elapsed = performance.now() - start;
+    const remaining = MIN_LOADING_TIME - elapsed;
+
+    if (remaining > 0) {
+        setTimeout(finishLoading, remaining);
+    } else {
+        finishLoading();
+    }
+});
+const beep = new Audio("audio/beep.mp3");
+beep.volume = 0.2;
+
+setInterval(() => {
+    if (document.querySelector(".progress")) {
+        beep.currentTime = 0;
+        beep.play().catch(()=>{});
+    }
+}, 600);
+
+
