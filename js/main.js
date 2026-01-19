@@ -505,16 +505,12 @@ function setSettingsMenuOpen(open) {
   settingsMenu.classList.toggle('open', open);
   settingsMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
   
-  // Ocultar/mostrar el aviso flotante arcade
-  if (arcadeHint) {
+  // Ocultar/mostrar el aviso flotante arcade (solo si gamepad está conectado)
+  if (arcadeHint && window.gamepadState.connected) {
     if (open) {
-      arcadeHint.style.opacity = '0';
-      arcadeHint.style.pointerEvents = 'none';
-      arcadeHint.style.transform = 'scale(0.8) translateY(10px)';
+      arcadeHint.classList.remove('visible');
     } else {
-      arcadeHint.style.opacity = '1';
-      arcadeHint.style.pointerEvents = 'auto';
-      arcadeHint.style.transform = 'scale(1) translateY(0)';
+      arcadeHint.classList.add('visible');
     }
   }
 }

@@ -2055,10 +2055,22 @@ canvas {
     0 0 20px rgba(255, 230, 0, 0.4),
     0 0 40px rgba(255, 230, 0, 0.2),
     0 8px 32px rgba(0, 0, 0, 0.5);
-  animation: tooltipFloat 3s ease-in-out infinite, tooltipGlow 2s ease-in-out infinite alternate;
   transform-origin: bottom right;
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+
+  /* Oculto por defecto - solo visible cuando hay gamepad */
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8) translateY(10px);
+}
+
+/* Mostrar cuando hay gamepad conectado */
+#arcadeHint.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1) translateY(0);
+  animation: tooltipFloat 3s ease-in-out infinite, tooltipGlow 2s ease-in-out infinite alternate;
 }
 
 #arcadeHint:hover {
