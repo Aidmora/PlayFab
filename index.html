@@ -108,7 +108,7 @@
 
       <button class="btn-side" id="nextBtn" aria-label="Siguiente">▶</button>
 
-      <!-- ⚙️ Botón de ayuda - Engranaje brillante con tooltip -->
+      <!-- ⚙️ Botón de ayuda - Engranaje brillante -->
       <div class="settings-wrapper">
         <button class="btn-settings" id="settingsBtn" aria-label="Ayuda y opciones" title="Ayuda y opciones">
           <svg class="gear-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -117,19 +117,24 @@
           </svg>
         </button>
         
-        <!-- Tooltip flotante -->
-        <span class="settings-tooltip">Aprende a jugar</span>
+        <!-- 🎮 AVISO FLOTANTE ARCADE - Presiona Y -->
+        <div class="arcade-hint" id="arcadeHint">
+          <span class="arcade-hint-key">Y</span>
+          <span class="arcade-hint-text">AYUDA</span>
+        </div>
 
-        <!-- Menú (Help + Mute adentro) -->
+        <!-- Menú (Help + Mute adentro) con teclas -->
         <div class="settings-menu" id="settingsMenu" aria-hidden="true">
           <button class="menu-item" id="openHelpBtn" type="button">
             <span class="mi-icon">?</span>
             <span class="mi-text">Tutorial</span>
+            <span class="mi-key">R</span>
           </button>
 
           <button class="menu-item" id="muteBtn" type="button" aria-label="Mute música">
             <span class="mi-icon mi-audio">🔊</span>
             <span class="mi-text">Sonido</span>
+            <span class="mi-key">B</span>
           </button>
         </div>
       </div>
@@ -201,7 +206,7 @@
     </div>
   </div>
 
-  <!-- TUTORIAL OVERLAY -->
+  <!-- TUTORIAL OVERLAY - ACTUALIZADO CON CONTROLES ARCADE -->
   <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="true">
     <div class="tutorial-content">
       <div class="tutorial-header">
@@ -210,56 +215,110 @@
       </div>
 
       <div class="tutorial-body">
+        <!-- COLUMNA IZQUIERDA: MODO PC -->
         <div class="control-column">
           <h3>🖥️ MODO PC</h3>
 
           <div class="game-guide">
             <h4><img src="Images/ping pong.png" onerror="this.style.display='none'"> PING PONG</h4>
-            <p><strong>Control:</strong> Mueve el <span class="key-highlight">MOUSE</span> arriba/abajo.</p>
+            <p><span class="key-highlight">MOUSE</span> o <span class="key-highlight">↑↓</span> Mover paleta</p>
           </div>
 
           <div class="game-guide">
             <h4><img src="Images/snake.png" onerror="this.style.display='none'"> SNAKE</h4>
-            <p><strong>Control:</strong> Flechas <span class="key-highlight">⬆ ⬇ ⬅ ➡</span></p>
+            <p><span class="key-highlight">↑↓←→</span> o <span class="key-highlight">WASD</span> Mover</p>
           </div>
 
           <div class="game-guide">
             <h4><img src="Images/cpu_defender.png" onerror="this.style.display='none'"> CPU DEFENDER</h4>
-            <p><strong>Palanca:</strong> Flechas <span class="key-highlight">⬆ ⬇ ⬅ ➡</span></p>
-            <p><strong>Disparar:</strong> tecla <span class="key-highlight">A</span></p>
-            <p><strong>Curar:</strong> tecla <span class="key-highlight">B</span></p>
+            <p><span class="key-highlight">↑↓←→</span> Mover nave</p>
+            <p><span class="key-highlight">A</span> Disparar</p>
+            <p><span class="key-highlight">S</span> Curar</p>
+          </div>
+
+          <div class="game-guide general-controls">
+            <h4>⌨️ CONTROLES GENERALES</h4>
+            <p><span class="key-highlight">ENTER</span> Reiniciar juego</p>
+            <p><span class="key-highlight">ESC</span> Cerrar menús</p>
           </div>
         </div>
 
+        <!-- COLUMNA DERECHA: MODO ARCADE -->
         <div class="control-column arcade-column">
           <h3>🕹️ MODO ARCADE</h3>
-          <p class="subtitle">Configuración Joystick Casero</p>
 
-          <div class="joystick-visual">
-            <div class="stick-part">
-              <div class="stick-ball">PALANCA</div>
-              <span class="label-func">Mover / Apuntar</span>
-            </div>
-
-            <div class="buttons-part">
-              <div class="btn-top">A</div>
-              <div class="btn-mid-row">
-                <div class="btn-left">B</div>
-                <div class="btn-right">—</div>
+          <!-- Controles del menú -->
+          <div class="arcade-section">
+            <h4>📋 MENÚ PRINCIPAL</h4>
+            <div class="arcade-control-list">
+              <div class="arcade-control">
+                <span class="arcade-btn stick">⬅➡</span>
+                <span>Navegar juegos</span>
               </div>
-              <div class="btn-right">—</div>
-              <span class="label-func">Acciones</span>
+              <div class="arcade-control">
+                <span class="arcade-btn">SELECT</span>
+                <span>Seleccionar juego</span>
+              </div>
+              <div class="arcade-control">
+                <span class="arcade-btn yellow">Y</span>
+                <span>Abrir ayuda</span>
+              </div>
             </div>
           </div>
 
-          <div class="arcade-legend">
-            <ul>
-              <li><strong>Palanca:</strong> Mover / Apuntar</li>
-              <li><strong>Botón A:</strong> Disparar</li>
-              <li><strong>Botón B:</strong> Curar</li>
-            </ul>
+          <!-- Controles en juego -->
+          <div class="arcade-section">
+            <h4>🎮 EN LOS JUEGOS</h4>
+            
+            <div class="game-arcade-controls">
+              <p class="game-name">PONG & SNAKE</p>
+              <div class="arcade-control">
+                <span class="arcade-btn stick">PALANCA</span>
+                <span>Mover</span>
+              </div>
+            </div>
+
+            <div class="game-arcade-controls">
+              <p class="game-name">CPU DEFENDER</p>
+              <div class="arcade-control">
+                <span class="arcade-btn stick">PALANCA</span>
+                <span>Mover nave</span>
+              </div>
+              <div class="arcade-control">
+                <span class="arcade-btn red">A</span>
+                <span>Disparar</span>
+              </div>
+              <div class="arcade-control">
+                <span class="arcade-btn blue">B</span>
+                <span>Curar</span>
+              </div>
+              <div class="arcade-control">
+                <span class="arcade-btn">L</span>
+                <span>Activar modo IA</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controles generales arcade -->
+          <div class="arcade-section">
+            <h4>🔧 GENERAL</h4>
+            <div class="arcade-control-list">
+              <div class="arcade-control">
+                <span class="arcade-btn red">X</span>
+                <span>Salir del juego</span>
+              </div>
+              <div class="arcade-control">
+                <span class="arcade-btn">SELECT</span>
+                <span>Reiniciar</span>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- Footer del tutorial con tecla para cerrar -->
+      <div class="tutorial-footer">
+        <span>Presiona <span class="key-highlight">X</span> o <span class="key-highlight">ESC</span> para cerrar</span>
       </div>
     </div>
   </div>

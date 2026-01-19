@@ -4,29 +4,25 @@
    ✅ Soporta:
    - Botón viejo: #helpBtn (aunque esté hidden)
    - Botón nuevo del menú: #openHelpBtn
-   - Llamadas directas: openTutorial() / closeTutorial() (por si lo usas en HTML o main.js)
+   - Llamadas directas: openTutorial() / closeTutorial()
+   - ARCADE: X o B para cerrar, R para abrir desde menú
 */
 
 document.addEventListener('DOMContentLoaded', () => {
   // Elementos del DOM
-  const helpBtnLegacy = document.getElementById('helpBtn');      // botón viejo/oculto
-  const openHelpBtn = document.getElementById('openHelpBtn');    // botón nuevo (en settings)
+  const helpBtnLegacy = document.getElementById('helpBtn');
+  const openHelpBtn = document.getElementById('openHelpBtn');
   const tutorialOverlay = document.getElementById('tutorial-overlay');
   const closeBtn = document.querySelector('.btn-close-tutorial');
 
-  // Si no existe el overlay, no hay nada que hacer
   if (!tutorialOverlay) return;
 
   // --- Helpers de UI ---
   function showOverlay() {
-    // Asegura display correcto aunque el CSS use clases
     tutorialOverlay.style.display = 'flex';
     tutorialOverlay.classList.remove('fade-in');
-    // reflow para reiniciar animación
     void tutorialOverlay.offsetWidth;
     tutorialOverlay.classList.add('fade-in');
-
-    // Accesibilidad
     tutorialOverlay.setAttribute('aria-hidden', 'false');
     tutorialOverlay.classList.add('active');
   }
@@ -38,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tutorialOverlay.setAttribute('aria-hidden', 'true');
   }
 
-  // --- API global (para main.js y/o onclick en HTML) ---
+  // --- API global ---
   window.openTutorial = function () {
     showOverlay();
   };
@@ -67,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Cerrar haciendo clic fuera del contenido (en el fondo)
+  // Cerrar haciendo clic fuera del contenido
   tutorialOverlay.addEventListener('click', (e) => {
     if (e.target === tutorialOverlay) hideOverlay();
   });
@@ -77,4 +73,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const isOpen = tutorialOverlay.style.display === 'flex' || tutorialOverlay.classList.contains('active');
     if (e.key === 'Escape' && isOpen) hideOverlay();
   });
+
+  // ============================================
+  // SOPORTE ARCADE/GAMEPAD
+  // X (botón 0) o B (botón 2) para cerrar
+  // ============================================
+  const ARCADE_BUTTONS = {
+    X: 0,
+    B: 2
+  };
+
+  let prevButtonState = {};
+
+  function isButtonJustPressed(gp, buttonIndex) {
+    const isPressed = gp.buttons[buttonIndex]?.pressed || false;
+    const wasPressed = prevButtonState[buttonIndex] || false;
+    return isPressed && !wasPressed;
+  }
+
+  function updatePrevState(gp) {
+    for (let i = 0; i < gp.buttons.length; i++) {
+      prevButtonState[i] = gp.buttons[i]?.pressed || false;
+    }
+  }
+
+  function tutorialGamepadLoop() {
+    const gamepads = navigator.getGamepads();
+    const gp = gamepads[0];
+    
+    if (gp) {
+      const isOpen = tutorialOverlay.style.display === 'flex' || tutorialOverlay.classList.contains('active');
+      
+      if (isOpen) {
+        // X o B para cerrar
+        if (isButtonJustPressed(gp, ARCADE_BUTTONS.X) || isButtonJustPressed(gp, ARCADE_BUTTONS.B)) {
+          hideOverlay();
+        }
+      }
+      
+      updatePrevState(gp);
+    }
+    
+    requestAnimationFrame(tutorialGamepadLoop);
+  }
+
+  // Iniciar loop solo si hay soporte de gamepad
+  if ('getGamepads' in navigator) {
+    requestAnimationFrame(tutorialGamepadLoop);
+  }
 });

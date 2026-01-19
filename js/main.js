@@ -3,9 +3,11 @@
    - Soporte completo para ARCADE/GAMEPAD
    - Palanca: navegar juegos
    - SELECT: jugar
-   - X: cerrar juego
+   - X: cerrar juego / salir
+   - Y: abrir menú ayuda
+   - R: tutorial (cuando menú abierto)
+   - B: toggle sonido (cuando menú abierto)
    - START: iniciar desde splash
-   - Audio solo con START/ESPACIO en splash
    ================================================== */
 
 let currentIndex = 0;
@@ -18,6 +20,7 @@ const playBtn = document.getElementById('playBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsMenu = document.getElementById('settingsMenu');
 const openHelpBtn = document.getElementById('openHelpBtn');
+const arcadeHint = document.getElementById('arcadeHint');
 
 window.gameInterval = null;
 window.activeCpuGameInstance = null;
@@ -33,14 +36,14 @@ window.gamepadState = {
 
 // Mapeo de botones del arcade
 const ARCADE_BUTTONS = {
-  X: 0,
-  A: 1,
-  B: 2,
-  Y: 3,
-  L: 4,
-  R: 5,
-  SELECT: 8,
-  START: 9
+  X: 0,      // Salir / Cerrar
+  A: 1,      // Acción principal
+  B: 2,      // Sonido (en menú) / Curar (en juego)
+  Y: 3,      // Abrir menú ayuda
+  L: 4,      // Modo IA
+  R: 5,      // Tutorial (en menú)
+  SELECT: 8, // Seleccionar juego / Reiniciar
+  START: 9   // Iniciar desde splash / Jugar
 };
 
 // Estado previo para detectar "just pressed"
@@ -51,11 +54,21 @@ let prevAxisState = { left: false, right: false, up: false, down: false };
 window.addEventListener('gamepadconnected', (e) => {
   console.log('🎮 Arcade conectado:', e.gamepad.id);
   window.gamepadState.connected = true;
+  
+  // Mostrar hint de arcade si existe
+  if (arcadeHint) {
+    arcadeHint.classList.add('visible');
+  }
 });
 
 window.addEventListener('gamepaddisconnected', (e) => {
   console.log('🎮 Arcade desconectado');
   window.gamepadState.connected = false;
+  
+  // Ocultar hint
+  if (arcadeHint) {
+    arcadeHint.classList.remove('visible');
+  }
 });
 
 // Función para verificar si un botón fue RECIÉN presionado
@@ -114,8 +127,12 @@ function gamepadLoop() {
   if (gp) {
     const loader = document.getElementById('retro-loader');
     const gameOverlay = document.getElementById('game-overlay');
+    const tutorialOverlay = document.getElementById('tutorial-overlay');
+    
     const isInGame = gameOverlay && gameOverlay.classList.contains('active');
     const isInSplash = loader && loader.style.opacity !== '0';
+    const isTutorialOpen = tutorialOverlay && (tutorialOverlay.classList.contains('active') || tutorialOverlay.style.display === 'flex');
+    const isMenuOpen = isSettingsMenuOpen();
     
     // === SPLASH: START para comenzar ===
     if (isInSplash) {
@@ -123,11 +140,38 @@ function gamepadLoop() {
         skipSplashAndStart();
       }
     }
+    // === TUTORIAL ABIERTO ===
+    else if (isTutorialOpen) {
+      // X o B para cerrar tutorial
+      if (isButtonJustPressed(ARCADE_BUTTONS.X) || isButtonJustPressed(ARCADE_BUTTONS.B)) {
+        window.closeTutorial();
+      }
+    }
+    // === MENÚ SETTINGS ABIERTO ===
+    else if (isMenuOpen) {
+      // R para tutorial
+      if (isButtonJustPressed(ARCADE_BUTTONS.R)) {
+        setSettingsMenuOpen(false);
+        window.openTutorial();
+      }
+      // B para toggle sonido
+      if (isButtonJustPressed(ARCADE_BUTTONS.B)) {
+        muteBtn?.click();
+      }
+      // X o Y para cerrar menú
+      if (isButtonJustPressed(ARCADE_BUTTONS.X) || isButtonJustPressed(ARCADE_BUTTONS.Y)) {
+        setSettingsMenuOpen(false);
+      }
+    }
     // === EN JUEGO ===
     else if (isInGame) {
       // X para cerrar/salir del juego
       if (isButtonJustPressed(ARCADE_BUTTONS.X)) {
         window.closeMinigame();
+      }
+      // Y para abrir ayuda incluso en juego
+      if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
+        window.openTutorial();
       }
     }
     // === EN MENÚ PRINCIPAL ===
@@ -145,21 +189,9 @@ function gamepadLoop() {
         playBtn.click();
       }
       
-      // A para abrir menú de ayuda
-      if (isButtonJustPressed(ARCADE_BUTTONS.A)) {
-        if (isSettingsMenuOpen()) {
-          // Si el menú está abierto, A abre tutorial
-          openHelpBtn?.click();
-        } else {
-          settingsBtn?.click();
-        }
-      }
-      
-      // B para cerrar menú
-      if (isButtonJustPressed(ARCADE_BUTTONS.B)) {
-        if (isSettingsMenuOpen()) {
-          setSettingsMenuOpen(false);
-        }
+      // Y para abrir menú de ayuda
+      if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
+        setSettingsMenuOpen(!isSettingsMenuOpen());
       }
     }
   }
