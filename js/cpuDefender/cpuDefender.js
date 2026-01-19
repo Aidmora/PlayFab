@@ -332,7 +332,7 @@ class CpuGame {
       if (gp.axes[0] > 0.5)  activeInput['gp_right'] = true;
 
       // 2. DISPARO
-      if (gp.buttons[0].pressed) {
+      if (gp.buttons[1].pressed) {
         if (this.shootCooldown <= 0 && this.ammo > 0) {
           this.player.shoot(this);
           this.shootCooldown = 15;
@@ -342,7 +342,7 @@ class CpuGame {
       }
 
       // 3. REPARAR (Botones 1, 2, 3)
-      const btnRepair = gp.buttons[1]?.pressed || gp.buttons[2]?.pressed || gp.buttons[3]?.pressed;
+      const btnRepair = gp.buttons[2]?.pressed;
       if (btnRepair && !this.gamepadRepairLocked) {
         this.repairCpu();
         this.gamepadRepairLocked = true;
@@ -351,7 +351,7 @@ class CpuGame {
       }
 
       // 4. TOGGLE IA (NUEVO: Botón 4 o Botón 8/Select)
-      const btnToggle = gp.buttons[4]?.pressed || gp.buttons[8]?.pressed;
+      const btnToggle = gp.buttons[4]?.pressed;
       if (btnToggle && !this.gamepadAiToggleLocked) {
         this.setMLMode(!this.mlModeActive);
         this.gamepadAiToggleLocked = true;

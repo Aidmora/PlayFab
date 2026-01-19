@@ -1,13 +1,27 @@
 /* ==================================================
    PONG CON IA ADAPTATIVA
-   La CPU ajusta su dificultad según el rendimiento del jugador
-   El primero en llegar a 5 puntos gana
+   Con soporte para ARCADE/GAMEPAD
+   - Palanca: mover paleta arriba/abajo
+   - El primero en llegar a 5 puntos gana
+   - Reinicio con SELECT/START o ENTER
    ================================================== */
 
 function startPong() {
   const { ctx, canvas } = createGameCanvas(600, 400);
 
-  const WINNING_SCORE = 5; // Puntos para ganar
+  const WINNING_SCORE = 5;
+
+  // Mapeo de botones del arcade
+  const ARCADE_BUTTONS = {
+    X: 0,
+    A: 1,
+    B: 2,
+    Y: 3,
+    L: 4,
+    R: 5,
+    SELECT: 8,
+    START: 9
+  };
 
   let ball = {
     x: 300,
@@ -20,9 +34,8 @@ function startPong() {
   let cpu = { y: 150, score: 0 };
   let running = true;
   let gameOver = false;
-  let winner = null; // 'player' o 'cpu'
+  let winner = null;
   
-  // Sistema de dificultad adaptativa mejorado
   let cpuDifficulty = 0.04;
   let playerWinStreak = 0;
   let cpuWinStreak = 0;
@@ -32,7 +45,6 @@ function startPong() {
   
   const handleKeyDown = (e) => {
     keys[e.key] = true;
-    // Reiniciar juego con ENTER o ESPACIO cuando termina
     if (gameOver && (e.key === 'Enter' || e.key === ' ')) {
       restartGame();
     }
@@ -52,14 +64,12 @@ function startPong() {
     player.y = e.clientY - rect.top - 40;
   };
 
-  // Click para reiniciar cuando termina
   canvas.onclick = () => {
     if (gameOver) {
       restartGame();
     }
   };
 
-  // Función para reiniciar el juego
   function restartGame() {
     player.score = 0;
     cpu.score = 0;
@@ -73,7 +83,6 @@ function startPong() {
     resetBall();
   }
 
-  // Función para reiniciar la pelota
   function resetBall() {
     ball.x = 300;
     ball.y = 200;
@@ -81,7 +90,6 @@ function startPong() {
     ball.dy = 3.5 * (Math.random() > 0.5 ? 1 : -1);
   }
 
-  // Función para verificar si alguien ganó
   function checkWinner() {
     if (player.score >= WINNING_SCORE) {
       gameOver = true;
@@ -96,17 +104,44 @@ function startPong() {
     return false;
   }
 
-  // Función para dibujar pantalla de fin de juego
+  // Leer input del gamepad/arcade
+  function readGamepadInput() {
+    const gamepads = navigator.getGamepads();
+    const gp = gamepads[0];
+    if (!gp) return;
+
+    // Reiniciar con SELECT o START
+    if (gameOver) {
+      if (gp.buttons[ARCADE_BUTTONS.SELECT]?.pressed || 
+          gp.buttons[ARCADE_BUTTONS.START]?.pressed ||
+          gp.buttons[ARCADE_BUTTONS.A]?.pressed) {
+        restartGame();
+        return;
+      }
+    }
+
+    // Leer palanca (joystick) - Eje Y para arriba/abajo
+    const axisY = gp.axes[1];
+    
+    // Movimiento más suave con el joystick
+    if (axisY < -0.3) {
+      // Arriba - velocidad proporcional a cuánto se mueve la palanca
+      const speed = Math.abs(axisY) * 8;
+      player.y = Math.max(0, player.y - speed);
+    } else if (axisY > 0.3) {
+      // Abajo
+      const speed = Math.abs(axisY) * 8;
+      player.y = Math.min(320, player.y + speed);
+    }
+  }
+
   function drawGameOver() {
-    // Fondo oscuro semi-transparente
     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
     ctx.fillRect(0, 0, 600, 400);
 
-    // Texto de victoria o derrota
     ctx.textAlign = 'center';
     
     if (winner === 'player') {
-      // Victoria
       ctx.fillStyle = '#00ff41';
       ctx.font = 'bold 48px "Press Start 2P", monospace';
       ctx.fillText('¡VICTORIA!', 300, 150);
@@ -115,7 +150,6 @@ function startPong() {
       ctx.font = '18px "Press Start 2P", monospace';
       ctx.fillText(`${player.score} - ${cpu.score}`, 300, 200);
     } else {
-      // Derrota
       ctx.fillStyle = '#ff4444';
       ctx.font = 'bold 42px "Press Start 2P", monospace';
       ctx.fillText('GAME OVER', 300, 150);
@@ -125,13 +159,11 @@ function startPong() {
       ctx.fillText(`${player.score} - ${cpu.score}`, 300, 200);
     }
 
-    // Instrucción para reiniciar
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.font = '12px "Press Start 2P", monospace';
-    
-    // Efecto de parpadeo
     if (Math.floor(Date.now() / 500) % 2 === 0) {
-      ctx.fillText('CLICK O ENTER PARA REINICIAR', 300, 300);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillText('SELECT/ENTER PARA REINICIAR', 300, 280);
+      ctx.fillText('X PARA SALIR', 300, 305);
     }
 
     ctx.textAlign = 'left';
@@ -141,7 +173,9 @@ function startPong() {
   window.gameInterval = setInterval(() => {
     if (!running) return;
 
-    // Si el juego terminó, solo dibujar pantalla de fin
+    // Leer gamepad
+    readGamepadInput();
+
     if (gameOver) {
       drawGameOver();
       return;
@@ -164,7 +198,7 @@ function startPong() {
       ball.dy *= -1;
     }
 
-    // Colisión con paletas (mejorada)
+    // Colisión con paletas
     if (ball.x <= 20 && ball.x >= 10 && ball.y > player.y && ball.y < player.y + 80) {
       ball.dx = Math.abs(ball.dx) * 1.08;
       ball.x = 20;
@@ -174,14 +208,13 @@ function startPong() {
       ball.x = 580;
     }
 
-    // Punto (reinicio)
+    // Punto
     if (ball.x < 0 || ball.x > 600) {
       if (ball.x < 0) {
         cpu.score++;
         cpuWinStreak++;
         playerWinStreak = 0;
         
-        // Reducir dificultad progresivamente según la racha de CPU
         if (cpuWinStreak === 1) {
           cpuDifficulty = Math.max(0.02, cpuDifficulty - 0.025);
         } else if (cpuWinStreak === 2) {
@@ -194,7 +227,6 @@ function startPong() {
         playerWinStreak++;
         cpuWinStreak = 0;
         
-        // Aumentar dificultad progresivamente según la racha del jugador
         if (playerWinStreak === 1) {
           cpuDifficulty = Math.min(0.4, cpuDifficulty + 0.03);
         } else if (playerWinStreak === 2) {
@@ -204,19 +236,17 @@ function startPong() {
         }
       }
       
-      // Verificar si alguien ganó
       if (!checkWinner()) {
         resetBall();
       }
 
-      // Actualizar score en el footer
       const scoreEl = document.getElementById('game-score');
       if (scoreEl) {
         scoreEl.textContent = `TÚ: ${player.score} | CPU: ${cpu.score}`;
       }
     }
 
-    // IA adaptativa del CPU con límite de error
+    // IA del CPU
     let targetY = ball.y - 40;
     let error = 0;
     
@@ -243,7 +273,7 @@ function startPong() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Marcador grande
+    // Marcador grande de fondo
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.font = 'bold 80px monospace';
     ctx.textAlign = 'center';
@@ -251,30 +281,30 @@ function startPong() {
     ctx.fillText(`${cpu.score}`, 450, 250);
     ctx.textAlign = 'left';
 
-    // Marcador pequeño arriba
+    // Marcador arriba
     ctx.fillStyle = 'white';
     ctx.font = '20px monospace';
     ctx.fillText(`${player.score}`, 250, 35);
     ctx.fillText(`${cpu.score}`, 335, 35);
     
-    // Meta de puntos
+    // Meta
     ctx.font = '10px monospace';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.fillText(`META: ${WINNING_SCORE}`, 270, 55);
 
-    // Indicador de dificultad
+    // Dificultad
     ctx.font = '10px monospace';
     ctx.fillStyle = getDifficultyColor(cpuDifficulty);
     ctx.fillText(`CPU: ${getDifficultyLabel(cpuDifficulty)}`, 10, 20);
 
-    // Paleta del jugador (verde)
+    // Paleta del jugador
     ctx.fillStyle = '#00ff41';
     ctx.shadowColor = '#00ff41';
     ctx.shadowBlur = 10;
     ctx.fillRect(10, player.y, 10, 80);
     ctx.shadowBlur = 0;
 
-    // Paleta del CPU (naranja)
+    // Paleta del CPU
     ctx.fillStyle = '#ff7a00';
     ctx.shadowColor = '#ff7a00';
     ctx.shadowBlur = 10;
@@ -292,7 +322,7 @@ function startPong() {
 
   }, 16);
 
-  // Limpiar eventos al cerrar
+  // Limpiar al cerrar
   const originalClose = window.closeMinigame;
   window.closeMinigame = function() {
     window.removeEventListener('keydown', handleKeyDown);
@@ -301,7 +331,6 @@ function startPong() {
   };
 }
 
-// Función auxiliar para obtener etiqueta de dificultad
 function getDifficultyLabel(diff) {
   if (diff < 0.05) return 'MUY FÁCIL';
   if (diff < 0.1) return 'FÁCIL';
@@ -310,11 +339,10 @@ function getDifficultyLabel(diff) {
   return 'EXPERTO';
 }
 
-// Función auxiliar para obtener color de dificultad
 function getDifficultyColor(diff) {
-  if (diff < 0.05) return '#00ff41'; // Verde
-  if (diff < 0.1) return '#7fff00'; // Verde-amarillo
-  if (diff < 0.2) return '#ffff00'; // Amarillo
-  if (diff < 0.3) return '#ff7a00'; // Naranja
-  return '#ff4444'; // Rojo
+  if (diff < 0.05) return '#00ff41';
+  if (diff < 0.1) return '#7fff00';
+  if (diff < 0.2) return '#ffff00';
+  if (diff < 0.3) return '#ff7a00';
+  return '#ff4444';
 }
