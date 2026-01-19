@@ -364,9 +364,6 @@ header h1 {
     0 2px 6px rgba(0,0,0,0.55),
     inset 0 0 12px rgba(0,0,0,0.30);
 }
-/* =========================
-   MUSIC BUTTON (ARCADE STYLE)
-   ========================= */
 
 .mute-btn {
   width: 55px;
@@ -379,7 +376,7 @@ header h1 {
   font-size: 1rem;
   color: #000;
 
-  /* 🟠 ACTIVO */
+  /*ACTIVO */
   background: radial-gradient(circle at 30% 30%, #ff47b2, #ff0077);
 
   box-shadow:
