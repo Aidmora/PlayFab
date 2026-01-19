@@ -504,6 +504,19 @@ function setSettingsMenuOpen(open) {
   if (!settingsMenu) return;
   settingsMenu.classList.toggle('open', open);
   settingsMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+  
+  // Ocultar/mostrar el aviso flotante arcade
+  if (arcadeHint) {
+    if (open) {
+      arcadeHint.style.opacity = '0';
+      arcadeHint.style.pointerEvents = 'none';
+      arcadeHint.style.transform = 'scale(0.8) translateY(10px)';
+    } else {
+      arcadeHint.style.opacity = '1';
+      arcadeHint.style.pointerEvents = 'auto';
+      arcadeHint.style.transform = 'scale(1) translateY(0)';
+    }
+  }
 }
 
 function isSettingsMenuOpen() {
