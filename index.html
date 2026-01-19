@@ -23,19 +23,34 @@
 
 <body>
 
-  <div id="retro-loader">
+  <!-- 🎮 SPLASH ÉPICO ARCADE -->
+  <div id="retro-loader" aria-hidden="true">
+    <!-- Partículas flotantes -->
+    <div class="splash-particles">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
     <div class="crt">
       <div class="logo">PLAYFAB</div>
-      <div class="loading-text">CARGANDO...</div>
-      <div class="bar">
+      <div class="loading-text">INICIANDO SISTEMA...</div>
+      <div class="bar" aria-label="Progreso de carga">
         <div class="progress"></div>
       </div>
+      <div class="insert-coin">PRESS START</div>
     </div>
   </div>
 
+  <!-- Decoración izquierda -->
   <div class="side-decoration left">
     <div class="neon-owl">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path class="owl-body" d="M50,60 Q20,180 100,180 Q180,180 150,60 Q100,10 50,60 Z" fill="none" stroke="#00ff41" stroke-width="4"/>
         <circle class="owl-eye" cx="70" cy="80" r="15" fill="none" stroke="#ff7b00" stroke-width="3"/>
         <circle class="owl-eye" cx="130" cy="80" r="15" fill="none" stroke="#ff7b00" stroke-width="3"/>
@@ -46,6 +61,7 @@
     </div>
   </div>
 
+  <!-- CABINET -->
   <div class="arcade-cabinet">
     <header>
       <h1>PLAYFAB</h1>
@@ -84,7 +100,7 @@
       </div>
     </div>
 
-    <!-- CONTROL PANEL (más limpio) -->
+    <!-- CONTROL PANEL -->
     <div class="control-panel">
       <button class="btn-side" id="prevBtn" aria-label="Anterior">◀</button>
 
@@ -92,9 +108,17 @@
 
       <button class="btn-side" id="nextBtn" aria-label="Siguiente">▶</button>
 
-      <!-- NUEVO: botón settings -->
+      <!-- ⚙️ Botón de ayuda - Engranaje brillante con tooltip -->
       <div class="settings-wrapper">
-        <button class="btn-settings" id="settingsBtn" aria-label="Opciones" title="Opciones">⚙</button>
+        <button class="btn-settings" id="settingsBtn" aria-label="Ayuda y opciones" title="Ayuda y opciones">
+          <svg class="gear-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+        
+        <!-- Tooltip flotante -->
+        <span class="settings-tooltip">Aprende a jugar</span>
 
         <!-- Menú (Help + Mute adentro) -->
         <div class="settings-menu" id="settingsMenu" aria-hidden="true">
@@ -109,9 +133,13 @@
           </button>
         </div>
       </div>
+
+      <!-- Para evitar crash si tutorial.js todavía busca #helpBtn -->
+      <button id="helpBtn" type="button" style="display:none;" aria-hidden="true" tabindex="-1">help</button>
     </div>
   </div>
 
+  <!-- Decoración derecha -->
   <div class="side-decoration right">
     <div class="neon-text-container">
       <h2 class="neon-epn">EPN</h2>
@@ -119,7 +147,8 @@
     </div>
   </div>
 
-  <div id="game-overlay" class="game-overlay">
+  <!-- OVERLAY JUEGO -->
+  <div id="game-overlay" class="game-overlay" aria-hidden="true">
     <div class="game-container">
       <div class="game-header">
         <h3 id="game-title">JUGANDO...</h3>
@@ -136,6 +165,19 @@
       </div>
 
       <div class="game-area" id="game-area" style="position: relative;">
+        <!-- Intro antes de iniciar el juego -->
+        <div id="game-intro" class="game-intro" aria-hidden="true">
+          <!-- Decoración lateral -->
+          <div class="game-intro-decor left"></div>
+          <div class="game-intro-decor right"></div>
+          
+          <div class="game-intro-inner">
+            <div class="game-intro-kicker">PREPÁRATE</div>
+            <h1 id="game-intro-title" class="game-intro-title">JUEGO</h1>
+            <div class="game-intro-sub">INICIANDO...</div>
+          </div>
+        </div>
+
         <div id="challenge-announcement" class="challenge-overlay" style="display: none;">
           <h1 class="glitch-text" id="announcement-title">ACELERACIÓN DEL CPU</h1>
           <p id="announcement-subtitle">DIFICULTAD DE IA HABILITADA</p>
@@ -160,7 +202,7 @@
   </div>
 
   <!-- TUTORIAL OVERLAY -->
-  <div id="tutorial-overlay" class="tutorial-overlay">
+  <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="true">
     <div class="tutorial-content">
       <div class="tutorial-header">
         <h2>INSTRUCCIONES DE JUEGO</h2>
@@ -183,9 +225,9 @@
 
           <div class="game-guide">
             <h4><img src="Images/cpu_defender.png" onerror="this.style.display='none'"> CPU DEFENDER</h4>
-            <p><strong>Reparar:</strong> tecla "Q"</p>
-            <p><strong>Disparar:</strong> tecla "espacio"</p>
-            <p><strong>Control:</strong> Flechas <span class="key-highlight">⬆ ⬇ ⬅ ➡</span></p>
+            <p><strong>Palanca:</strong> Flechas <span class="key-highlight">⬆ ⬇ ⬅ ➡</span></p>
+            <p><strong>Disparar:</strong> tecla <span class="key-highlight">A</span></p>
+            <p><strong>Curar:</strong> tecla <span class="key-highlight">B</span></p>
           </div>
         </div>
 
@@ -210,7 +252,6 @@
             </div>
           </div>
 
-          <!-- Ajustado para CPU DEFENDER -->
           <div class="arcade-legend">
             <ul>
               <li><strong>Palanca:</strong> Mover / Apuntar</li>

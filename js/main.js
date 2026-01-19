@@ -19,6 +19,78 @@ const openHelpBtn = document.getElementById('openHelpBtn');
 window.gameInterval = null;
 window.activeCpuGameInstance = null;
 
+/* ==================================================
+   INTRO POR JUEGO (UI) - SOLO DISEÑO
+   ================================================== */
+window.__gameIntroTimeout = null;
+window.__gameRunToken = 0;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getGameIntroLabel(type) {
+  if (type === 'pong') return 'PONG';
+  if (type === 'snake') return 'SNAKE';
+  return 'CPU DEFENDER';
+}
+
+function ensureGameAreaUI(gameArea) {
+  // (Re)inyecta overlays UI necesarios si fueron limpiados.
+  // Incluye el overlay de intro por juego.
+  if (!gameArea) return;
+
+  gameArea.innerHTML = `
+    <div id="game-intro" class="game-intro" aria-hidden="true">
+      <div class="game-intro-inner">
+        <div class="game-intro-kicker">PREPÁRATE</div>
+        <h1 id="game-intro-title" class="game-intro-title">JUEGO</h1>
+        <div class="game-intro-sub">INICIANDO...</div>
+      </div>
+    </div>
+
+    <div id="challenge-announcement" class="challenge-overlay" style="display: none;">
+      <h1 class="glitch-text" id="announcement-title">CPU OVERDRIVE</h1>
+      <p id="announcement-subtitle">AI DIFFICULTY ENABLED</p>
+    </div>
+
+    <div id="ai-loading" class="challenge-overlay" style="display: none; background: #000; z-index: 500;">
+      <div class="spinner"></div>
+      <p id="loading-text" style="margin-top: 20px; color: #00ff00; font-family: 'Courier Prime'; text-align:center;">
+        CARGANDO CEREBRO...
+      </p>
+    </div>
+  `;
+}
+
+async function showGameIntro(type) {
+  // Limpia timeout anterior
+  if (window.__gameIntroTimeout) {
+    clearTimeout(window.__gameIntroTimeout);
+    window.__gameIntroTimeout = null;
+  }
+
+  const intro = document.getElementById('game-intro');
+  const introTitle = document.getElementById('game-intro-title');
+
+  if (!intro || !introTitle) {
+    // Si no existe por cualquier razón, no bloqueamos inicio.
+    return;
+  }
+
+  introTitle.textContent = getGameIntroLabel(type);
+
+  intro.classList.add('active');
+  intro.setAttribute('aria-hidden', 'false');
+
+  // Tiempo de “pantalla grande”
+  await sleep(1100);
+
+  // Oculta overlay
+  intro.classList.remove('active');
+  intro.setAttribute('aria-hidden', 'true');
+}
+
 function withAudio(fn) {
   const am = window.audioManager;
   if (am) return fn(am);
@@ -75,6 +147,10 @@ window.playMinigame = async function (type) {
   const gameArea = document.getElementById('game-area');
   const title = document.getElementById('game-title');
 
+  // Token para evitar que arranque el juego si el usuario cierra antes de tiempo
+  const runToken = Date.now();
+  window.__gameRunToken = runToken;
+
   if (window.gameInterval) clearInterval(window.gameInterval);
   if (window.activeCpuGameInstance) {
     window.activeCpuGameInstance.destroy();
@@ -82,20 +158,8 @@ window.playMinigame = async function (type) {
   }
   document.getElementById('mlToggle').checked = false;
 
-  gameArea.innerHTML = '';
-  gameArea.innerHTML += `
-    <div id="challenge-announcement" class="challenge-overlay" style="display: none;">
-      <h1 class="glitch-text" id="announcement-title">CPU OVERDRIVE</h1>
-      <p id="announcement-subtitle">AI DIFFICULTY ENABLED</p>
-    </div>
-
-    <div id="ai-loading" class="challenge-overlay" style="display: none; background: #000; z-index: 500;">
-      <div class="spinner"></div>
-      <p id="loading-text" style="margin-top: 20px; color: #00ff00; font-family: 'Courier Prime'; text-align:center;">
-        CARGANDO CEREBRO...
-      </p>
-    </div>
-  `;
+  // Reinyecta UI del overlay (intro + loaders)
+  ensureGameAreaUI(gameArea);
 
   overlay.classList.add('active');
   if (title) title.innerText = type.toUpperCase();
@@ -103,6 +167,14 @@ window.playMinigame = async function (type) {
   // Música del juego (crossfade desde lobby)
   withAudio((am) => am.playGameTrack(type));
 
+  // UI: mostrar intro ANTES de iniciar el juego
+  await showGameIntro(type);
+
+  // Si se cerró o se inició otro juego durante la intro, aborta
+  if (window.__gameRunToken !== runToken) return;
+  if (!overlay.classList.contains('active')) return;
+
+  // Luego de intro, inicia la lógica del juego (SIN cambiar lógica interna)
   if (type === 'cpu') {
     document.querySelector('.ml-switch-container').style.display = 'flex';
     startCpuDefender();
@@ -115,6 +187,13 @@ window.playMinigame = async function (type) {
 
 // ---- Cerrar ----
 window.closeMinigame = function () {
+  // Cancela cualquier inicio pendiente por intro
+  window.__gameRunToken = 0;
+  if (window.__gameIntroTimeout) {
+    clearTimeout(window.__gameIntroTimeout);
+    window.__gameIntroTimeout = null;
+  }
+
   if (window.gameInterval) clearInterval(window.gameInterval);
   if (window.activeCpuGameInstance) {
     window.activeCpuGameInstance.destroy();
@@ -198,67 +277,47 @@ async function unlockAudioByInput() {
 }
 
 // Captura cualquier interacción del usuario
-['pointerdown', 'keydown', 'touchstart', 'click'].forEach(evt => {
-  window.addEventListener(evt, unlockAudioByInput, { once: true, capture: true });
-});
+window.addEventListener("pointerdown", unlockAudioByInput, { once: true, capture: true });
+window.addEventListener("keydown", unlockAudioByInput, { once: true, capture: true });
+window.addEventListener("touchstart", unlockAudioByInput, { once: true, capture: true });
 
-// Mute button setup
 const muteBtn = document.getElementById("muteBtn");
 
-function updateMuteButton() {
-  if (!muteBtn) return;
-  const am = window.audioManager;
-  const muted = am?.isMuted ?? false;
-  
-  muteBtn.classList.toggle("muted", muted);
-  const icon = muteBtn.querySelector('.mi-icon');
-  if (icon) icon.textContent = muted ? '🔇' : '🔊';
+// Estado inicial
+if (muteBtn && audioManager.isMuted) {
+  muteBtn.classList.add("muted");
 }
 
-// Inicializa el estado del botón
-updateMuteButton();
-
 if (muteBtn) {
-  muteBtn.addEventListener("click", async () => {
-    const am = window.audioManager;
-    if (!am) return;
+  muteBtn.addEventListener("click", () => {
+    const muted = audioManager.toggleMute();
+    muteBtn.classList.toggle("muted", muted);
 
-    // Si aún no se desbloqueó y está muteado, primero desbloquea
-    if (!am.unlocked && am.isMuted) {
-      am.isMuted = false;
-      localStorage.setItem("muted", "false");
-      await am.unlockAndPrime();
-      am.startLobbyNow();
-    } else {
-      am.toggleMute();
-    }
-    
-    updateMuteButton();
+    // opcional: cambiar iconito 🔊/🔇 si lo usas en HTML
+    const icon = muteBtn.querySelector('.mi-icon');
+    if (icon) icon.textContent = muted ? '🔇' : '🔊';
+
+    // cerrar menú luego de click (queda más limpio)
     setSettingsMenuOpen(false);
   });
 }
 
-// ---- Splash ----
+// ---- CARGADOR RETRO ----
 window.addEventListener("load", () => {
   const loader = document.getElementById("retro-loader");
-  if (!loader) {
-    // Sin loader, marca splash como terminado
-    withAudio((am) => am.startLobbyNow());
-    return;
-  }
+  if (!loader) return;
 
-  const MIN_LOADING_TIME = 1400;
+  const MIN_LOADING_TIME = 2500; // Tiempo mínimo de carga en ms
   const start = performance.now();
 
   const finishLoading = () => {
-    loader.style.transition = "opacity 700ms ease";
-    loader.style.opacity = "0";
+    loader.style.transition = "opacity 1.5s ease";
+    loader.style.opacity = 0;
 
     setTimeout(() => {
       loader.remove();
-      // Marca splash como terminado e inicia lobby si ya se desbloqueó
-      withAudio((am) => am.startLobbyNow());
-    }, 700);
+      audioManager?.playOnce();
+    }, 1500);
   };
 
   const elapsed = performance.now() - start;
@@ -270,3 +329,14 @@ window.addEventListener("load", () => {
     finishLoading();
   }
 });
+
+// Beep del loader (si existe .progress)
+const beep = new Audio("audio/beep.mp3");
+beep.volume = 0.2;
+
+setInterval(() => {
+  if (document.querySelector(".progress")) {
+    beep.currentTime = 0;
+    beep.play().catch(() => {});
+  }
+}, 600);
