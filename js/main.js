@@ -1,6 +1,8 @@
 /* ==================================================
    MAIN (UI + NAVEGACION + OVERLAY)
    Mantiene la lógica original 1:1
+   + Menú ⚙ (Tutorial + Mute dentro)
+   + Audio: Lobby (Arcade) + música por juego
    ================================================== */
 
 // Estado del carrusel
@@ -12,8 +14,12 @@ const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const playBtn = document.getElementById('playBtn');
 
+// Settings menu (⚙)
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsMenu = document.getElementById('settingsMenu');
+const openHelpBtn = document.getElementById('openHelpBtn');
+
 // Timers / Instancias globales para minijuegos
-// (necesario para conservar el flujo actual)
 window.gameInterval = null;
 window.activeCpuGameInstance = null;
 
@@ -106,15 +112,18 @@ window.playMinigame = function (type) {
   overlay.classList.add('active');
   if (title) title.innerText = type.toUpperCase();
 
+  // ✅ Audio: al entrar a un juego, cambia del lobby al track del juego
+  if (window.audioManager?.playGameTrack) {
+    window.audioManager.playGameTrack(type);
+  }
+
   // Mostrar / ocultar switch ML según el juego
   if (type === 'cpu') {
     document.querySelector('.ml-switch-container').style.display = 'flex';
-    // startCpuDefender debe existir (definido en js/cpuDefender/cpuDefender.js)
     startCpuDefender();
   } else {
     document.querySelector('.ml-switch-container').style.display = 'none';
 
-    // startSnake / startPong deben existir (definidos en js/snake.js y js/pong.js)
     if (type === 'snake') startSnake();
     if (type === 'pong') startPong();
   }
@@ -130,61 +139,129 @@ window.closeMinigame = function () {
 
   document.getElementById('game-area').innerHTML = '';
   document.getElementById('game-overlay').classList.remove('active');
+
+  // ✅ Audio: al salir del juego, vuelve el lobby
+  if (window.audioManager?.returnToLobby) {
+    window.audioManager.returnToLobby();
+  }
 };
 
-
-// ---- AUDIO ARCADE ----
-document.addEventListener("click", () => {
-    audioManager.playOnce();
-}, { once: true });
-const muteBtn = document.getElementById("muteBtn");
-
-// Estado inicial
-if (audioManager.isMuted) {
-  muteBtn.classList.add("muted");
+// ==================================================
+//  Menú ⚙ (Tutorial + Mute dentro)
+// ==================================================
+function setSettingsMenuOpen(open) {
+  if (!settingsMenu) return;
+  settingsMenu.classList.toggle('open', open);
+  settingsMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
 }
 
-muteBtn.addEventListener("click", () => {
-  const muted = audioManager.toggleMute();
-  muteBtn.classList.toggle("muted", muted);
-});
+function isSettingsMenuOpen() {
+  return !!(settingsMenu && settingsMenu.classList.contains('open'));
+}
 
+if (settingsBtn && settingsMenu) {
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSettingsMenuOpen(!isSettingsMenuOpen());
+  });
 
+  // Cerrar si clic afuera
+  document.addEventListener('click', (e) => {
+    if (!isSettingsMenuOpen()) return;
+
+    const wrapper = settingsBtn.closest('.settings-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      setSettingsMenuOpen(false);
+    }
+  });
+
+  // Cerrar con ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isSettingsMenuOpen()) {
+      setSettingsMenuOpen(false);
+    }
+  });
+}
+
+// Abrir tutorial desde el menú
+if (openHelpBtn) {
+  openHelpBtn.addEventListener('click', () => {
+    setSettingsMenuOpen(false);
+
+    if (typeof openTutorial === 'function') {
+      openTutorial();
+    } else {
+      const overlay = document.getElementById('tutorial-overlay');
+      if (overlay) overlay.classList.add('active');
+    }
+  });
+}
+
+// ==================================================
+//  AUDIO (Lobby + Mute global)
+// ==================================================
+document.addEventListener("click", () => {
+  // playOnce() ahora arranca el lobby (una sola vez)
+  window.audioManager?.playOnce?.();
+}, { once: true });
+
+const muteBtn = document.getElementById("muteBtn");
+
+// Estado inicial del botón mute
+if (muteBtn && window.audioManager?.isMuted) {
+  muteBtn.classList.add("muted");
+  const icon = muteBtn.querySelector('.mi-icon');
+  if (icon) icon.textContent = '🔇';
+}
+
+if (muteBtn) {
+  muteBtn.addEventListener("click", () => {
+    const muted = window.audioManager?.toggleMute?.() ?? false;
+    muteBtn.classList.toggle("muted", muted);
+
+    const icon = muteBtn.querySelector('.mi-icon');
+    if (icon) icon.textContent = muted ? '🔇' : '🔊';
+
+    setSettingsMenuOpen(false);
+  });
+}
 
 // ---- CARGADOR RETRO ----
 window.addEventListener("load", () => {
-    const loader = document.getElementById("retro-loader");
+  const loader = document.getElementById("retro-loader");
+  if (!loader) return;
 
-    const MIN_LOADING_TIME = 2500; // Tiempo mínimo de carga en ms
-    const start = performance.now();
+  const MIN_LOADING_TIME = 2500;
+  const start = performance.now();
 
-    const finishLoading = () => {
-        loader.style.transition = "opacity 1.5s ease";
-        loader.style.opacity = 0;
+  const finishLoading = () => {
+    loader.style.transition = "opacity 1.5s ease";
+    loader.style.opacity = 0;
 
-        setTimeout(() => {
-            loader.remove();
-            audioManager?.playOnce();
-        }, 1500);
-    };
+    setTimeout(() => {
+      loader.remove();
+      // Al terminar el loader, queda el lobby listo (si ya hubo interacción, suena)
+      window.audioManager?.playOnce?.();
+    }, 1500);
+  };
 
-    const elapsed = performance.now() - start;
-    const remaining = MIN_LOADING_TIME - elapsed;
+  const elapsed = performance.now() - start;
+  const remaining = MIN_LOADING_TIME - elapsed;
 
-    if (remaining > 0) {
-        setTimeout(finishLoading, remaining);
-    } else {
-        finishLoading();
-    }
+  if (remaining > 0) setTimeout(finishLoading, remaining);
+  else finishLoading();
 });
+
+// Beep del loader (si existe .progress)
 const beep = new Audio("audio/beep.mp3");
 beep.volume = 0.2;
 
 setInterval(() => {
-    if (document.querySelector(".progress")) {
-        beep.currentTime = 0;
-        beep.play().catch(()=>{});
-    }
+  if (document.querySelector(".progress")) {
+    // Respeta mute global si ya está cargado audioManager
+    if (window.audioManager?.isMuted) return;
+
+    beep.currentTime = 0;
+    beep.play().catch(() => {});
+  }
 }, 600);
-
-

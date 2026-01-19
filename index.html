@@ -21,17 +21,17 @@
   <link rel="stylesheet" href="css/tutorial.css" />
 </head>
 
-<body> 
+<body>
 
   <div id="retro-loader">
     <div class="crt">
-        <div class="logo">PLAYFAB</div>
-        <div class="loading-text">CARGANDO...</div>
-        <div class="bar">
-            <div class="progress"></div>
-        </div>
+      <div class="logo">PLAYFAB</div>
+      <div class="loading-text">CARGANDO...</div>
+      <div class="bar">
+        <div class="progress"></div>
+      </div>
     </div>
-</div>
+  </div>
 
   <div class="side-decoration left">
     <div class="neon-owl">
@@ -84,12 +84,31 @@
       </div>
     </div>
 
+    <!-- CONTROL PANEL (más limpio) -->
     <div class="control-panel">
-      <button class="btn-side" id="prevBtn">◀</button>
+      <button class="btn-side" id="prevBtn" aria-label="Anterior">◀</button>
+
       <button class="btn-play" id="playBtn">JUGAR</button>
-      <button class="btn-side" id="nextBtn">▶</button>
-      <button class="btn-help" id="helpBtn" title="Ver Tutorial">?</button>
-      <button class="mute-btn" id="muteBtn" aria-label="Mute música"></button>
+
+      <button class="btn-side" id="nextBtn" aria-label="Siguiente">▶</button>
+
+      <!-- NUEVO: botón settings -->
+      <div class="settings-wrapper">
+        <button class="btn-settings" id="settingsBtn" aria-label="Opciones" title="Opciones">⚙</button>
+
+        <!-- Menú (Help + Mute adentro) -->
+        <div class="settings-menu" id="settingsMenu" aria-hidden="true">
+          <button class="menu-item" id="openHelpBtn" type="button">
+            <span class="mi-icon">?</span>
+            <span class="mi-text">Tutorial</span>
+          </button>
+
+          <button class="menu-item" id="muteBtn" type="button" aria-label="Mute música">
+            <span class="mi-icon mi-audio">🔊</span>
+            <span class="mi-text">Sonido</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -218,7 +237,7 @@
   <script src="js/cpuDefender/ui.js"></script>
   <script src="js/cpuDefender/cpuDefender.js"></script>
 
-   <!-- AUDIO -->
+  <!-- AUDIO -->
   <script src="js/audioManager.js"></script>
 
   <!-- Global / Navegación -->
