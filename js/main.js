@@ -183,12 +183,12 @@ function gamepadLoop() {
       if (isAxisJustMoved('right')) {
         nextBtn.click();
       }
-      
-      // SELECT o START para jugar
-      if (isButtonJustPressed(ARCADE_BUTTONS.SELECT) || isButtonJustPressed(ARCADE_BUTTONS.START)) {
+
+      // Solo SELECT para jugar (no START)
+      if (isButtonJustPressed(ARCADE_BUTTONS.SELECT)) {
         playBtn.click();
       }
-      
+
       // Y para abrir menú de ayuda
       if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
         setSettingsMenuOpen(!isSettingsMenuOpen());
@@ -219,18 +219,52 @@ function getGameIntroLabel(type) {
   return 'CPU DEFENDER';
 }
 
-function ensureGameAreaUI(gameArea) {
+function getGameControls(type) {
+  if (type === 'pong') {
+    return `
+      <div class="game-controls">
+        <div class="control-item">PALANCA / MOUSE: Mover paleta</div>
+        <div class="control-item">W/S: Mover paleta</div>
+        <div class="control-item">L: Activar/Desactivar IA</div>
+        <div class="control-item">META: 5 puntos</div>
+      </div>
+    `;
+  } else if (type === 'snake') {
+    return `
+      <div class="game-controls">
+        <div class="control-item">PALANCA: Dirección</div>
+        <div class="control-item">WASD: Dirección</div>
+        <div class="control-item">L: Activar/Desactivar IA</div>
+        <div class="control-item">OBJETIVO: Máxima puntuación</div>
+      </div>
+    `;
+  } else {
+    return `
+      <div class="game-controls">
+        <div class="control-item">PALANCA: Mover y esquivar</div>
+        <div class="control-item">A: Disparar</div>
+        <div class="control-item">B: Curar (si hay kit)</div>
+        <div class="control-item">SOBREVIVE el mayor tiempo posible</div>
+      </div>
+    `;
+  }
+}
+
+function ensureGameAreaUI(gameArea, gameType) {
   if (!gameArea) return;
 
   gameArea.innerHTML = `
     <div id="game-intro" class="game-intro" aria-hidden="true">
       <div class="game-intro-decor left"></div>
       <div class="game-intro-decor right"></div>
-      
+
       <div class="game-intro-inner">
         <div class="game-intro-kicker">PREPÁRATE</div>
         <h1 id="game-intro-title" class="game-intro-title">JUEGO</h1>
-        <div class="game-intro-sub">INICIANDO...</div>
+        <div id="game-intro-controls" class="game-intro-controls"></div>
+        <div class="game-intro-sub">
+          <span class="blink-text">PRESIONA START PARA JUGAR</span>
+        </div>
       </div>
     </div>
 
@@ -256,27 +290,78 @@ async function showGameIntro(type) {
 
   const intro = document.getElementById('game-intro');
   const introTitle = document.getElementById('game-intro-title');
+  const introControls = document.getElementById('game-intro-controls');
 
   if (!intro || !introTitle) return;
 
   introTitle.textContent = getGameIntroLabel(type);
 
+  // Agregar controles del juego
+  if (introControls) {
+    introControls.innerHTML = getGameControls(type);
+  }
+
   intro.classList.add('active');
   intro.setAttribute('aria-hidden', 'false');
 
-  await sleep(1400);
+  // Esperar a que el usuario presione START para continuar
+  return new Promise((resolve) => {
+    let resolved = false;
+    let buttonWasReleased = false; // Para evitar detectar el mismo press del menú
 
-  intro.style.opacity = '0';
-  intro.style.transform = 'scale(1.1)';
-  intro.style.transition = 'opacity 300ms ease, transform 300ms ease';
-  
-  await sleep(300);
+    const checkGamepad = () => {
+      if (resolved) return;
 
-  intro.classList.remove('active');
-  intro.setAttribute('aria-hidden', 'true');
-  intro.style.opacity = '';
-  intro.style.transform = '';
-  intro.style.transition = '';
+      const gamepads = navigator.getGamepads();
+      const gp = gamepads[0];
+
+      if (gp) {
+        const startPressed = gp.buttons[ARCADE_BUTTONS.START]?.pressed || false;
+
+        // Esperar a que se suelte el botón primero
+        if (!startPressed && !buttonWasReleased) {
+          buttonWasReleased = true;
+        }
+
+        // Solo detectar nueva presión después de que se haya soltado
+        if (startPressed && buttonWasReleased) {
+          resolved = true;
+          hideIntro();
+          resolve();
+          return;
+        }
+      }
+
+      requestAnimationFrame(checkGamepad);
+    };
+
+    const handleKeyPress = (e) => {
+      if (resolved) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        resolved = true;
+        document.removeEventListener('keydown', handleKeyPress);
+        hideIntro();
+        resolve();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    requestAnimationFrame(checkGamepad);
+
+    async function hideIntro() {
+      intro.style.opacity = '0';
+      intro.style.transform = 'scale(1.1)';
+      intro.style.transition = 'opacity 300ms ease, transform 300ms ease';
+
+      await sleep(300);
+
+      intro.classList.remove('active');
+      intro.setAttribute('aria-hidden', 'true');
+      intro.style.opacity = '';
+      intro.style.transform = '';
+      intro.style.transition = '';
+    }
+  });
 }
 
 function withAudio(fn) {
@@ -329,7 +414,7 @@ window.toggleMLMode = function () {
   }
 };
 
-// ---- Abrir Minijuego ----
+// ---- Abrir Minijuego (solo abre overlay y muestra intro) ----
 window.playMinigame = async function (type) {
   const overlay = document.getElementById('game-overlay');
   const gameArea = document.getElementById('game-area');
@@ -345,27 +430,35 @@ window.playMinigame = async function (type) {
   }
   document.getElementById('mlToggle').checked = false;
 
-  ensureGameAreaUI(gameArea);
+  ensureGameAreaUI(gameArea, type);
 
   overlay.classList.add('active');
   if (title) title.innerText = type.toUpperCase();
 
-  // Música del juego (crossfade desde lobby)
-  withAudio((am) => am.playGameTrack(type));
+  // Ocultar botón de IA durante la intro
+  const mlContainer = document.querySelector('.ml-switch-container');
+  if (mlContainer) mlContainer.style.display = 'none';
 
-  // UI: mostrar intro ANTES de iniciar el juego
+  // UI: mostrar intro y ESPERAR a que el usuario presione SELECT
   await showGameIntro(type);
 
   // Si se cerró o se inició otro juego durante la intro, aborta
   if (window.__gameRunToken !== runToken) return;
   if (!overlay.classList.contains('active')) return;
 
+  // Ahora SÍ iniciar la música del juego (después de SELECT en intro)
+  withAudio((am) => am.playGameTrack(type));
+
+  // Mostrar botón de IA solo para pong y snake (no para CPU)
+  if (type === 'pong' || type === 'snake') {
+    if (mlContainer) mlContainer.style.display = 'flex';
+  }
+
   // Inicia la lógica del juego
   if (type === 'cpu') {
-    document.querySelector('.ml-switch-container').style.display = 'flex';
+    if (mlContainer) mlContainer.style.display = 'flex';
     startCpuDefender();
   } else {
-    document.querySelector('.ml-switch-container').style.display = 'none';
     if (type === 'snake') startSnake();
     if (type === 'pong') startPong();
   }

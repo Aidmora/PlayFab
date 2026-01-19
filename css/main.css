@@ -1154,6 +1154,39 @@ header h1{
   }
 }
 
+/* Controles del juego */
+.game-intro-controls{
+  margin: 30px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: controlsFadeIn 0.8s ease-out 0.4s both;
+}
+
+@keyframes controlsFadeIn{
+  0%{ opacity: 0; transform: translateY(10px); }
+  100%{ opacity: 1; transform: translateY(0); }
+}
+
+.game-controls{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-item{
+  font-family: 'Courier Prime', monospace;
+  color: var(--orange-2);
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 4px 8px;
+  background: rgba(255, 122, 0, 0.1);
+  border: 1px solid rgba(255, 122, 0, 0.3);
+  border-radius: 4px;
+  text-shadow: 0 0 10px rgba(255, 122, 0, 0.5);
+}
+
 /* Subtítulo parpadeante */
 .game-intro-sub{
   font-family: 'Courier Prime', monospace;
@@ -1162,12 +1195,15 @@ header h1{
   font-size: 1rem;
   margin-top: 20px;
   text-shadow: 0 0 15px var(--glow-cyan);
-  animation: subBlink 0.3s steps(1) infinite 0.6s;
+}
+
+.blink-text{
+  animation: subBlink 1s ease-in-out infinite;
 }
 
 @keyframes subBlink{
-  0%, 60%{ opacity: 1; }
-  61%, 100%{ opacity: 0; }
+  0%, 50%{ opacity: 1; }
+  51%, 100%{ opacity: 0.3; }
 }
 
 /* Decoración lateral */
