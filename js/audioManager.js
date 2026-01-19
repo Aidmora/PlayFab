@@ -1,123 +1,306 @@
 // js/audioManager.js
+// - Rutas robustas aunque index.html esté en /html/
+// - Preload mejorado con promesas
+// - Crossfade suave entre tracks
+// - Expone window.audioManager
 
 class AudioManager {
   constructor() {
-    // ===== Música lobby (Arcade) =====
-    this.lobby = new Audio("audio/arcade.mp3");
-    this.lobby.loop = true;
-    this.lobby.volume = 0.5;
+    this.TARGET_VOL_LOBBY = 0.5;
+    this.TARGET_VOL_GAME = 0.5;
+    this.FADE_MS = 400;
+    this.PRIME_VOL = 0.001;
 
-    // ===== Música por juego (se asigna dinámicamente) =====
-    this.game = new Audio(); // src se setea al entrar a un juego
-    this.game.loop = true;
-    this.game.volume = 0.5;
-
-    // Track actual
-    this.currentGameType = null;
-
-    // Estado de mute persistente
     this.isMuted = localStorage.getItem("muted") === "true";
-    this.lobby.muted = this.isMuted;
-    this.game.muted = this.isMuted;
+    this.unlocked = false;
+    this.splashGone = false;
+    this.preloaded = false;
 
-    // Para evitar múltiples starts por autoplay policies
-    this.musicStarted = false;
+    this.activeType = null; // null hasta que suene algo
+    this.activeChannel = "A";
 
-    // Mapa de temas por juego (ajusta nombres si tus mp3 se llaman distinto)
-    this.gameTracks = {
-      pong: "audio/pong.mp3",
-      snake: "audio/snake.mp3",
-      cpu: "audio/cpu.mp3"
+    // Rutas: si tu index está en /html/index.html -> ../audio/... resuelve bien a /audio/...
+    const u = (rel) => new URL(rel, document.baseURI).toString();
+
+    this.tracks = {
+      lobby: u("../audio/arcade.mp3"),
+      pong:  u("../audio/pong.mp3"),
+      snake: u("../audio/snake.mp3"),
+      cpu:   u("../audio/cpu.mp3"),
     };
+
+    this.A = this._makeAudio();
+    this.B = this._makeAudio();
+
+    this._applyMuteTo(this.A);
+    this._applyMuteTo(this.B);
+
+    // Preload asíncrono
+    this._preloadAll();
   }
 
-  // =========================
-  // Lobby
-  // =========================
-  playLobby() {
-    // detener música del juego si está sonando
-    this.stopGame();
+  /* =========================
+     PUBLIC API
+     ========================= */
 
-    // si ya estaba sonando lobby, no reinicies
-    if (!this.lobby.paused) return;
+  async unlockAndPrime() {
+    if (this.unlocked) return true;
+    if (this.isMuted) return false;
 
-    this.lobby.currentTime = 0;
-    this.lobby.play().catch(() => {});
+    // Espera a que esté precargado el lobby
+    await this._waitForPreload();
+
+    // Prime: inicia lobby en canal A a volumen casi inaudible
+    const ok = await this._startOnChannel(this.A, "lobby", this.PRIME_VOL);
+    if (!ok) return false;
+
+    this.unlocked = true;
+    this.activeType = "lobby";
+    this.activeChannel = "A";
+
+    // Si el splash ya se fue, sube el volumen inmediatamente
+    if (this.splashGone) {
+      this._fade(this.A, this.PRIME_VOL, this.TARGET_VOL_LOBBY, 200);
+    }
+
+    return true;
   }
 
-  // Compatibilidad con tu main.js actual:
-  // playOnce() ahora arranca el lobby (una sola vez)
   playOnce() {
-    if (!this.musicStarted) {
-      this.musicStarted = true;
-      this.playLobby();
-    }
+    return this.unlockAndPrime();
   }
 
-  // =========================
-  // Game music
-  // =========================
+  startLobbyNow() {
+    this.splashGone = true;
+    if (!this.unlocked || this.isMuted) return;
+
+    const active = this._active();
+    
+    // Si ya está sonando lobby, solo sube el volumen
+    if (this.activeType === "lobby" && !active.paused) {
+      this._fade(active, active.volume, this.TARGET_VOL_LOBBY, 200);
+      return;
+    }
+
+    // Si no, crossfade a lobby
+    this.crossfadeTo("lobby", this.TARGET_VOL_LOBBY, 200);
+  }
+
   playGameTrack(type) {
-    this.currentGameType = type;
+    const key = (type === "pong" || type === "snake" || type === "cpu") ? type : "cpu";
 
-    // Pausar lobby
-    if (!this.lobby.paused) {
-      this.lobby.pause();
-      this.lobby.currentTime = 0;
+    if (!this.unlocked || this.isMuted) {
+      this.activeType = key; // Guardar para cuando se desmutee
+      return;
     }
 
-    // Setear el track del juego
-    const src = this.gameTracks[type] || this.gameTracks.cpu || "audio/arcade.mp3";
+    this.crossfadeTo(key, this.TARGET_VOL_GAME, this.FADE_MS);
+  }
 
-    // Si cambia de juego, reinicia el audio del juego
-    if (this.game.src !== new URL(src, window.location.href).href) {
-      this.game.pause();
-      this.game.src = src;
-      this.game.load();
+  returnToLobby() {
+    if (!this.unlocked || this.isMuted) {
+      this.activeType = "lobby";
+      return;
     }
 
-    this.game.currentTime = 0;
-    this.game.play().catch(() => {
-      // Si el browser bloquea autoplay, no rompemos nada.
-      // Se iniciará en el primer click (tu main.js ya dispara playOnce).
+    this.crossfadeTo("lobby", this.TARGET_VOL_LOBBY, this.FADE_MS);
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    localStorage.setItem("muted", this.isMuted);
+
+    this._applyMuteTo(this.A);
+    this._applyMuteTo(this.B);
+
+    if (this.isMuted) {
+      // Para todo
+      [this.A, this.B].forEach(a => {
+        try { a.pause(); a.currentTime = 0; } catch {}
+      });
+    } else {
+      // Vuelve a la pista que debería estar sonando
+      if (this.unlocked && this.splashGone) {
+        const type = this.activeType || "lobby";
+        const vol = (type === "lobby") ? this.TARGET_VOL_LOBBY : this.TARGET_VOL_GAME;
+        
+        // Reinicia en el canal A
+        this.activeChannel = "A";
+        this._startOnChannel(this.A, type, 0).then(ok => {
+          if (ok) this._fade(this.A, 0, vol, 300);
+        });
+      }
+    }
+
+    return this.isMuted;
+  }
+
+  crossfadeTo(type, targetVol = 0.5, fadeMs = 400) {
+    if (this.isMuted) {
+      this.activeType = type;
+      return;
+    }
+
+    const current = this._active();
+    const next = this._inactive();
+
+    // Si ya está sonando exactamente este track, solo ajusta volumen
+    if (this.activeType === type && !current.paused && current.src.includes(type === "lobby" ? "arcade" : type)) {
+      this._fade(current, current.volume, targetVol, fadeMs);
+      return;
+    }
+
+    // Prepara el siguiente canal con el nuevo track
+    this._startOnChannel(next, type, 0.0).then((ok) => {
+      if (!ok) return;
+
+      // Fade in del nuevo
+      this._fade(next, 0.0, targetVol, fadeMs);
+
+      // Fade out del actual (si está sonando)
+      if (!current.paused && current.volume > 0) {
+        this._fade(current, current.volume, 0.0, fadeMs, () => {
+          current.pause();
+          current.currentTime = 0;
+        });
+      }
+
+      // Actualiza estado
+      this.activeType = type;
+      this.activeChannel = (this.activeChannel === "A") ? "B" : "A";
     });
   }
 
-  stopGame() {
-    if (!this.game.paused) this.game.pause();
-    this.game.currentTime = 0;
-    this.currentGameType = null;
+  /* =========================
+     INTERNALS
+     ========================= */
+
+  _makeAudio() {
+    const a = new Audio();
+    a.preload = "auto";
+    a.loop = true;
+    a.volume = 0.0;
+    return a;
   }
 
-  // Al cerrar juego: vuelve el lobby
-  returnToLobby() {
-    this.stopGame();
-    this.playLobby();
+  _applyMuteTo(audio) {
+    audio.muted = this.isMuted;
   }
 
-  // =========================
-  // Mute global
-  // =========================
-  toggleMute() {
-    this.isMuted = !this.isMuted;
-
-    this.lobby.muted = this.isMuted;
-    this.game.muted = this.isMuted;
-
-    localStorage.setItem("muted", this.isMuted);
-    return this.isMuted;
+  _active() {
+    return (this.activeChannel === "A") ? this.A : this.B;
   }
 
-  setMute(forceMuted) {
-    this.isMuted = !!forceMuted;
+  _inactive() {
+    return (this.activeChannel === "A") ? this.B : this.A;
+  }
 
-    this.lobby.muted = this.isMuted;
-    this.game.muted = this.isMuted;
+  async _preloadAll() {
+    // PRIORIDAD: Precargar lobby (arcade.mp3) primero y en el canal A
+    this.A.src = this.tracks.lobby;
+    
+    // Espera a que lobby esté listo (máximo 2s)
+    await new Promise((resolve) => {
+      let resolved = false;
+      const done = () => {
+        if (resolved) return;
+        resolved = true;
+        resolve();
+      };
 
-    localStorage.setItem("muted", this.isMuted);
-    return this.isMuted;
+      this.A.addEventListener("canplaythrough", done, { once: true });
+      this.A.addEventListener("error", done, { once: true });
+      setTimeout(done, 2000);
+      
+      try { this.A.load(); } catch { done(); }
+    });
+
+    // Marca como precargado apenas lobby esté listo
+    this.preloaded = true;
+
+    // Precarga el resto en segundo plano (no bloquea)
+    for (const [key, src] of Object.entries(this.tracks)) {
+      if (key === "lobby") continue; // Ya está cargado
+      
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = src;
+      try { audio.load(); } catch {}
+    }
+  }
+
+  _waitForPreload() {
+    if (this.preloaded) return Promise.resolve();
+    
+    return new Promise((resolve) => {
+      const check = () => {
+        if (this.preloaded) resolve();
+        else setTimeout(check, 30);
+      };
+      check();
+      // Timeout máximo reducido
+      setTimeout(resolve, 1500);
+    });
+  }
+
+  async _startOnChannel(channel, type, initialVol) {
+    if (this.isMuted) return false;
+
+    const src = this.tracks[type] || this.tracks.lobby;
+    const filename = src.split('/').pop();
+    
+    // Si ya tiene el src correcto, no recargues
+    const alreadyLoaded = channel.src && channel.src.endsWith(filename);
+    
+    if (!alreadyLoaded) {
+      channel.pause();
+      channel.currentTime = 0;
+      channel.src = src;
+      
+      // Espera a que esté listo
+      await new Promise((resolve) => {
+        const done = () => resolve();
+        channel.addEventListener("canplaythrough", done, { once: true });
+        channel.addEventListener("error", done, { once: true });
+        setTimeout(done, 800);
+        try { channel.load(); } catch { done(); }
+      });
+    }
+
+    channel.volume = initialVol;
+
+    try {
+      await channel.play();
+      return true;
+    } catch (e) {
+      console.warn("AudioManager: play failed", e);
+      return false;
+    }
+  }
+
+  _fade(audio, from, to, ms, onDone) {
+    const start = performance.now();
+    const dur = Math.max(50, ms);
+
+    const tick = (now) => {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / dur);
+      
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      audio.volume = Math.max(0, Math.min(1, from + (to - from) * eased));
+
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        audio.volume = Math.max(0, Math.min(1, to));
+        if (onDone) onDone();
+      }
+    };
+
+    requestAnimationFrame(tick);
   }
 }
 
-// UNA sola instancia global
-const audioManager = new AudioManager();
+// GLOBAL
+window.audioManager = new AudioManager();
