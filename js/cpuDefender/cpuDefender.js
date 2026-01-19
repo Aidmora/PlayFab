@@ -39,7 +39,8 @@ function startCpuDefender() {
     <div id="cpu-game-over" class="cpu-game-over-msg" style="display:none;">
       <h2 style="color:red;">SYSTEM FAILURE</h2>
       <p>Score: <span id="final-cpu-score">0</span></p>
-      <p style="font-size:0.7rem; color:#aaa;">Click ✕ to Reset</p>
+      <p class="restart-hint" style="font-size:0.7rem; color:#ffb000; margin-top:10px;">SELECT/ENTER PARA REINICIAR</p>
+      <p style="font-size:0.6rem; color:#aaa;">X PARA SALIR</p>
     </div>
   `;
 
@@ -146,7 +147,8 @@ class CpuGame {
 
     // Control para evitar spam de botones en mando
     this.gamepadRepairLocked = false;
-    this.gamepadAiToggleLocked = false; // NUEVO: Bloqueo para el botón de IA
+    this.gamepadAiToggleLocked = false; // Bloqueo para el botón de IA
+    this.gamepadRestartLocked = false;  // Bloqueo para el botón de reinicio
 
     // Inputs de Teclado
     this.handleKeyDown = (e) => {
@@ -156,6 +158,12 @@ class CpuGame {
       }
 
       this.keys[e.key.toLowerCase()] = true;
+
+      // Reiniciar con Enter o Space cuando está en game over
+      if (this.state === 'gameover' && (e.key === 'Enter' || e.key === ' ')) {
+        this.restartGame();
+        return;
+      }
 
       // Disparo Teclado
       if (['z', 'x', 'c', ' ', 'enter'].includes(e.key.toLowerCase())) {
@@ -722,8 +730,86 @@ class CpuGame {
     const finalScore = document.getElementById('final-cpu-score');
     if (finalScore) finalScore.innerText = this.score;
 
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('keyup', this.handleKeyUp);
+    // NO removemos los listeners para poder detectar reinicio
+    // Iniciamos el loop de game over para detectar input de reinicio
+    this.gameOverLoop();
+  }
+
+  restartGame() {
+    // Ocultar mensaje de game over
+    const over = document.getElementById('cpu-game-over');
+    if (over) over.style.display = 'none';
+
+    // Reiniciar estado del juego
+    this.state = 'playing';
+    this.score = 0;
+    this.frameCount = 0;
+
+    // Reiniciar entidades
+    this.cpu = new window.CpuBase(this.width / 2, this.height - 60);
+    this.player = new window.PlayerTank(this.width / 2, this.height - 150);
+
+    // Limpiar arrays
+    this.bullets = [];
+    this.enemyBullets = [];
+    this.enemies = [];
+    this.tanks = [];
+    this.particles = [];
+    this.ammoBoxes = [];
+
+    // Reiniciar munición
+    this.maxAmmo = 50;
+    this.ammo = this.maxAmmo;
+    this.lowAmmoWarned = false;
+    this.ammoBoxSpawnTimer = 0;
+
+    // Reiniciar IA si estaba activa
+    if (this.mlModeActive) {
+      this.currentLevel = 1;
+      this.enemySpawnRate = 90;
+      this.resetAiFilterState();
+    } else {
+      this.currentLevel = 1;
+      this.enemySpawnRate = 120;
+    }
+
+    // Reiniciar controles de gamepad
+    this.gamepadRepairLocked = false;
+    this.gamepadAiToggleLocked = false;
+    this.gamepadRestartLocked = false;
+
+    // Actualizar score UI
+    updateScore(this.score);
+
+    // Reiniciar el loop principal
+    this.loop();
+  }
+
+  gameOverLoop() {
+    if (this.state !== 'gameover') return;
+
+    // Detectar input de gamepad para reiniciar
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = gamepads[0];
+
+    if (gp) {
+      const selectPressed = gp.buttons[8]?.pressed || false; // SELECT
+      const startPressed = gp.buttons[9]?.pressed || false;  // START
+      const aPressed = gp.buttons[1]?.pressed || false;      // A
+
+      if ((selectPressed || startPressed || aPressed) && !this.gamepadRestartLocked) {
+        this.gamepadRestartLocked = true;
+        this.restartGame();
+        return;
+      }
+
+      if (!selectPressed && !startPressed && !aPressed) {
+        this.gamepadRestartLocked = false;
+      }
+    }
+
+    // Continuar el loop de game over
+    requestAnimationFrame(() => this.gameOverLoop());
   }
 
   destroy() {
