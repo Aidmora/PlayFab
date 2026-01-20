@@ -52,7 +52,11 @@ class AudioManager {
 
     // Prime: inicia lobby en canal A a volumen casi inaudible
     const ok = await this._startOnChannel(this.A, "lobby", this.PRIME_VOL);
-    if (!ok) return false;
+    if (!ok) {
+      // Marcar que necesita reintento - no bloquear futuros intentos
+      console.warn("AudioManager: unlock failed, will retry on next user interaction");
+      return false;
+    }
 
     this.unlocked = true;
     this.activeType = "lobby";
@@ -66,19 +70,53 @@ class AudioManager {
     return true;
   }
 
+  // Método para forzar el inicio del audio (llamado tras interacción del usuario)
+  async forceStart() {
+    if (this.isMuted) return false;
+
+    // Reset del estado para permitir reintento
+    this.unlocked = false;
+
+    const ok = await this.unlockAndPrime();
+    if (ok && this.splashGone) {
+      this.startLobbyNow();
+    }
+    return ok;
+  }
+
   playOnce() {
     return this.unlockAndPrime();
   }
 
   startLobbyNow() {
     this.splashGone = true;
-    if (!this.unlocked || this.isMuted) return;
+    if (this.isMuted) return;
 
+    // Si no está desbloqueado, intentar desbloquear
+    if (!this.unlocked) {
+      this.unlockAndPrime().then(ok => {
+        if (ok) this._ensureLobbyPlaying();
+      });
+      return;
+    }
+
+    this._ensureLobbyPlaying();
+  }
+
+  _ensureLobbyPlaying() {
     const active = this._active();
-    
+
     // Si ya está sonando lobby, solo sube el volumen
     if (this.activeType === "lobby" && !active.paused) {
       this._fade(active, active.volume, this.TARGET_VOL_LOBBY, 200);
+      return;
+    }
+
+    // Si el canal activo está pausado pero debería ser lobby, reiniciarlo
+    if (this.activeType === "lobby" && active.paused) {
+      this._startOnChannel(active, "lobby", 0).then(ok => {
+        if (ok) this._fade(active, 0, this.TARGET_VOL_LOBBY, 200);
+      });
       return;
     }
 

@@ -67,41 +67,55 @@ function startPong() {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 
-  // Sincronizar con el toggle del HTML (solo cuando el juego comienza)
+  // Sincronizar con el toggle del HTML usando sistema centralizado
   const mlToggle = document.getElementById('mlToggle');
-  let toggleListenerAdded = false;
+
+  // Callback que será llamado por toggleMLMode en main.js
+  function handleIAToggle(isEnabled) {
+    if (isEnabled !== iaMode) {
+      iaMode = isEnabled;
+      if (!iaMode) {
+        cpuDifficulty = FIXED_DIFFICULTY;
+        playerWinStreak = 0;
+        cpuWinStreak = 0;
+      }
+      showIANotification(iaMode);
+    }
+  }
 
   function setupToggle() {
-    if (mlToggle && !toggleListenerAdded) {
+    // Registrar callback en el sistema centralizado
+    window.registerIACallback(handleIAToggle);
+    if (mlToggle) {
       mlToggle.checked = iaMode;
-      mlToggle.addEventListener('change', () => {
-        iaMode = mlToggle.checked;
-        if (!iaMode) {
-          cpuDifficulty = FIXED_DIFFICULTY;
-        }
-        showIANotification(iaMode);
-      });
-      toggleListenerAdded = true;
     }
   }
 
   function toggleIAMode() {
     iaMode = !iaMode;
     if (mlToggle) mlToggle.checked = iaMode;
-    
+
     if (!iaMode) {
       // Volver a dificultad fija
       cpuDifficulty = FIXED_DIFFICULTY;
       playerWinStreak = 0;
       cpuWinStreak = 0;
     }
-    
+
     showIANotification(iaMode);
   }
 
   function showIANotification(enabled) {
+    // Remover notificaciones previas
+    const gameArea = document.getElementById('game-area');
+    if (!gameArea) return;
+
+    const oldNotifications = gameArea.querySelectorAll('.ia-notification');
+    oldNotifications.forEach(n => n.remove());
+
     // Mostrar notificación en el canvas
     const notification = document.createElement('div');
+    notification.className = 'ia-notification';
     notification.style.cssText = `
       position: absolute;
       top: 50%;
@@ -115,15 +129,23 @@ function startPong() {
       font-size: 14px;
       z-index: 1000;
       pointer-events: none;
-      animation: fadeOut 1.5s forwards;
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
     `;
     notification.textContent = enabled ? 'IA ADAPTATIVA ON' : 'IA NORMAL';
-    
-    const gameArea = document.getElementById('game-area');
-    if (gameArea) {
-      gameArea.appendChild(notification);
-      setTimeout(() => notification.remove(), 1500);
-    }
+
+    gameArea.appendChild(notification);
+
+    // Fade out manual
+    setTimeout(() => {
+      notification.style.opacity = '0';
+    }, 1000);
+
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 1500);
   }
 
   // Control del jugador con mouse
@@ -439,7 +461,7 @@ function startPong() {
   window.closeMinigame = function() {
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('keyup', handleKeyUp);
-    if (mlToggle) mlToggle.checked = false;
+    // El callback de IA se limpia automáticamente en closeMinigame de main.js
     if (originalClose) originalClose();
   };
 }

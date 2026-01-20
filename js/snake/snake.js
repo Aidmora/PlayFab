@@ -48,19 +48,23 @@ function startSnake() {
   let prevGamepadDir = { x: 0, y: 0 };
   let prevLPressed = false;
 
-  // Sincronizar con el toggle del HTML (solo cuando el juego comienza)
+  // Sincronizar con el toggle del HTML usando sistema centralizado
   const mlToggle = document.getElementById('mlToggle');
-  let toggleListenerAdded = false;
+
+  // Callback que será llamado por toggleMLMode en main.js
+  function handleIAToggle(isEnabled) {
+    if (isEnabled !== iaMode) {
+      iaMode = isEnabled;
+      applySpeedMode();
+      showIANotification(iaMode);
+    }
+  }
 
   function setupToggle() {
-    if (mlToggle && !toggleListenerAdded) {
+    // Registrar callback en el sistema centralizado
+    window.registerIACallback(handleIAToggle);
+    if (mlToggle) {
       mlToggle.checked = iaMode;
-      mlToggle.addEventListener('change', () => {
-        iaMode = mlToggle.checked;
-        applySpeedMode();
-        showIANotification(iaMode);
-      });
-      toggleListenerAdded = true;
     }
   }
 
@@ -79,7 +83,7 @@ function startSnake() {
       // Modo IA: usar velocidad adaptativa
       gameSpeed = adaptiveSpeed;
     }
-    
+
     // Reiniciar el loop con la nueva velocidad
     clearInterval(window.gameInterval);
     if (!gameOver) {
@@ -88,7 +92,15 @@ function startSnake() {
   }
 
   function showIANotification(enabled) {
+    // Remover notificaciones previas
+    const gameArea = document.getElementById('game-area');
+    if (!gameArea) return;
+
+    const oldNotifications = gameArea.querySelectorAll('.ia-notification');
+    oldNotifications.forEach(n => n.remove());
+
     const notification = document.createElement('div');
+    notification.className = 'ia-notification';
     notification.style.cssText = `
       position: absolute;
       top: 50%;
@@ -102,18 +114,26 @@ function startSnake() {
       font-size: 12px;
       z-index: 1000;
       pointer-events: none;
-      animation: fadeOut 1.5s forwards;
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
       text-align: center;
     `;
-    notification.innerHTML = enabled 
-      ? 'IA ADAPTATIVA ON<br><small style="font-size:8px">Velocidad se ajusta a tu nivel</small>' 
+    notification.innerHTML = enabled
+      ? 'IA ADAPTATIVA ON<br><small style="font-size:8px">Velocidad se ajusta a tu nivel</small>'
       : 'MODO CLÁSICO<br><small style="font-size:8px">Velocidad fija</small>';
-    
-    const gameArea = document.getElementById('game-area');
-    if (gameArea) {
-      gameArea.appendChild(notification);
-      setTimeout(() => notification.remove(), 1500);
-    }
+
+    gameArea.appendChild(notification);
+
+    // Fade out manual
+    setTimeout(() => {
+      notification.style.opacity = '0';
+    }, 1000);
+
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 1500);
   }
 
   function initSnake() {
@@ -533,7 +553,7 @@ function startSnake() {
   window.closeMinigame = function() {
     document.removeEventListener('keydown', handleKeyDown);
     clearInterval(window.gameInterval);
-    if (mlToggle) mlToggle.checked = false;
+    // El callback de IA se limpia automáticamente en closeMinigame de main.js
     if (originalClose) originalClose();
   };
 }

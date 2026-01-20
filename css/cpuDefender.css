@@ -1,9 +1,46 @@
 /* =========================
-   CPU DEFENDER - UI / IA
-   (extraído 1:1 de styles.css)
+   CPU DEFENDER - CYBERPUNK RESKIN
+   Arcade Retro Premium / 16-bit
    ========================= */
 
-/* CPU UI */
+/* === CRT SCANLINE OVERLAY === */
+.crt-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  animation: crtFlicker 0.1s infinite;
+}
+
+@keyframes crtFlicker {
+  0%, 100% { opacity: 0.97; }
+  50% { opacity: 1; }
+}
+
+/* Viñeta */
+.vignette-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 9;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* === CPU UI LAYER === */
 .ui-layer {
   position: absolute;
   top: 0; left: 0;
@@ -11,39 +48,123 @@
   pointer-events: none;
 }
 
+/* === HUD CONTROLS - ARCADE BUTTONS === */
 .hud-controls {
   position: absolute;
   bottom: 20px;
   right: 20px;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   pointer-events: all;
 }
 
 .btn-cpu {
-  background: #444;
-  border: 2px solid #fff;
-  color: white;
-  padding: 8px 15px;
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
+  background: linear-gradient(180deg, #2a2a3a 0%, #1a1a2a 50%, #0a0a1a 100%);
+  border: 3px solid #00ffff;
+  border-radius: 8px;
+  color: #00ffff;
+  padding: 12px 20px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
   cursor: pointer;
+  text-transform: uppercase;
+  box-shadow:
+    0 4px 0 #006666,
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.1s ease;
+  position: relative;
+  overflow: hidden;
 }
 
+.btn-cpu::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+  transition: left 0.3s ease;
+}
+
+.btn-cpu:hover::before {
+  left: 100%;
+}
+
+.btn-cpu:hover {
+  border-color: #00ffaa;
+  color: #00ffaa;
+  box-shadow:
+    0 4px 0 #006655,
+    0 0 25px rgba(0, 255, 170, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-cpu:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #006666,
+    0 0 10px rgba(0, 255, 255, 0.4),
+    inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.btn-cpu span {
+  display: block;
+  font-size: 8px;
+  color: #ffcc00;
+  margin-top: 4px;
+}
+
+/* === GAME OVER MESSAGE - CYBERPUNK === */
 .cpu-game-over-msg {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
-  padding: 20px 40px;
+  background: linear-gradient(180deg, rgba(20, 0, 30, 0.95) 0%, rgba(10, 0, 20, 0.98) 100%);
+  padding: 30px 50px;
   text-align: center;
-  border: 2px solid red;
+  border: 3px solid #ff0066;
+  border-radius: 10px;
   color: white;
   z-index: 20;
+  box-shadow:
+    0 0 30px rgba(255, 0, 102, 0.5),
+    inset 0 0 50px rgba(255, 0, 102, 0.1);
+  animation: gameOverPulse 1s ease-in-out infinite;
 }
 
-/* ML TOGGLE & ALERTS */
+@keyframes gameOverPulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(255, 0, 102, 0.5), inset 0 0 50px rgba(255, 0, 102, 0.1); }
+  50% { box-shadow: 0 0 50px rgba(255, 0, 102, 0.8), inset 0 0 80px rgba(255, 0, 102, 0.2); }
+}
+
+.cpu-game-over-msg h2 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.5rem;
+  color: #ff0066;
+  text-shadow: 0 0 10px #ff0066, 0 0 20px #ff0066;
+  margin-bottom: 15px;
+  animation: glitchText 0.3s infinite;
+}
+
+@keyframes glitchText {
+  0%, 90%, 100% { transform: translate(0); }
+  92% { transform: translate(-2px, 1px); }
+  94% { transform: translate(2px, -1px); }
+  96% { transform: translate(-1px, 2px); }
+  98% { transform: translate(1px, -2px); }
+}
+
+.cpu-game-over-msg .restart-hint {
+  animation: blink 0.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* === ML TOGGLE - CYBERPUNK STYLE === */
 .ml-switch-container {
   display: flex;
   align-items: center;
@@ -51,9 +172,10 @@
 }
 
 .ml-label {
-  font-size: 0.8rem;
-  color: var(--secondary);
+  font-size: 0.7rem;
+  color: #00ffff;
   font-family: 'Press Start 2P', cursive;
+  text-shadow: 0 0 5px #00ffff;
 }
 
 .switch {
@@ -73,9 +195,10 @@
   position: absolute;
   cursor: pointer;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #444;
+  background: linear-gradient(180deg, #1a1a2a 0%, #0a0a1a 100%);
   transition: .4s;
-  border: 2px solid #666;
+  border: 2px solid #444;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .slider:before {
@@ -85,16 +208,21 @@
   width: 26px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background: linear-gradient(180deg, #666 0%, #333 100%);
   transition: .4s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 input:checked + .slider {
-  background-color: var(--primary);
+  background: linear-gradient(180deg, #003322 0%, #001a11 100%);
+  border-color: #00ff66;
+  box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.3);
 }
 
 input:checked + .slider:before {
   transform: translateX(26px);
+  background: linear-gradient(180deg, #00ff66 0%, #00aa44 100%);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
 }
 
 .slider.round {
@@ -105,12 +233,12 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
-/* RED OVERLAY ALERT */
+/* === CHALLENGE OVERLAY - CYBERPUNK === */
 .challenge-overlay {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(255, 0, 0, 0.4);
+  background: linear-gradient(180deg, rgba(0, 20, 40, 0.9) 0%, rgba(0, 10, 30, 0.95) 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -122,59 +250,151 @@ input:checked + .slider:before {
 .challenge-overlay h1 {
   font-family: 'Press Start 2P', cursive;
   font-size: 2rem;
-  color: #fff;
-  text-shadow: 4px 4px 0 #ff0000;
+  color: #00ffff;
+  text-shadow:
+    0 0 10px #00ffff,
+    0 0 20px #00ffff,
+    4px 4px 0 #006666;
   text-align: center;
+  animation: glitchText 0.2s infinite;
 }
 
 .challenge-overlay p {
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: #ffff00;
-  background: #000;
-  padding: 5px 10px;
-  border: 2px solid #ffff00;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1rem;
+  color: #ffcc00;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px 20px;
+  border: 2px solid #ffcc00;
+  border-radius: 5px;
   text-align: center;
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
+  margin-top: 15px;
 }
 
-/* SPINNER */
+/* === SPINNER - CYBERPUNK === */
 .spinner {
-  border: 8px solid #333;
-  border-top: 8px solid #00ff00;
+  border: 6px solid #0a1a2a;
+  border-top: 6px solid #00ffff;
+  border-right: 6px solid #00ff66;
   border-radius: 50%;
   width: 60px;
   height: 60px;
-  animation: spin 1s linear infinite;
+  animation: spinCyber 0.8s linear infinite;
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.3),
+    inset 0 0 20px rgba(0, 255, 102, 0.1);
 }
 
-@keyframes spin {
+@keyframes spinCyber {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-/* HUD IA */
+/* === HUD IA STATUS === */
 .ai-status-hud {
   position: absolute;
   top: 20px;
   left: 20px;
-  font-family: 'Courier Prime', monospace;
+  font-family: 'Press Start 2P', monospace;
   font-weight: bold;
-  color: #00ff00;
-  font-size: 1rem;
-  text-shadow: 0 0 5px #00ff00;
-  background: rgba(0, 20, 0, 0.8);
-  padding: 10px;
-  border: 1px solid #00ff00;
+  color: #00ff66;
+  font-size: 0.8rem;
+  text-shadow: 0 0 10px #00ff66;
+  background: linear-gradient(180deg, rgba(0, 20, 10, 0.9) 0%, rgba(0, 10, 5, 0.95) 100%);
+  padding: 12px 15px;
+  border: 2px solid #00ff66;
+  border-radius: 5px;
   pointer-events: none;
   z-index: 50;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  box-shadow:
+    0 0 15px rgba(0, 255, 102, 0.3),
+    inset 0 0 20px rgba(0, 255, 102, 0.05);
 }
 
 .ai-status-hud small {
-  font-size: 0.6rem;
-  color: #aaffaa;
-  opacity: 0.8;
+  font-size: 0.5rem;
+  color: #88ffaa;
+  opacity: 0.9;
+}
+
+/* === AMMO BAR VISUAL === */
+.ammo-bar-container {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.ammo-bar-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #ffcc00;
+  text-shadow: 0 0 5px #ffcc00;
+}
+
+.ammo-bar-track {
+  width: 150px;
+  height: 20px;
+  background: linear-gradient(180deg, #1a1a2a 0%, #0a0a1a 100%);
+  border: 2px solid #ffcc00;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow:
+    0 0 10px rgba(255, 204, 0, 0.2),
+    inset 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.ammo-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6600 0%, #ffcc00 50%, #ffff00 100%);
+  transition: width 0.2s ease;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+  position: relative;
+}
+
+.ammo-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+}
+
+.ammo-bar-fill.low {
+  background: linear-gradient(90deg, #ff0000 0%, #ff3300 100%);
+  animation: ammoPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes ammoPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* === HEAL EFFECT OVERLAY === */
+.heal-effect {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 8;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 255, 102, 0.3) 0%,
+    transparent 50%
+  );
+  animation: healPulse 0.5s ease-out forwards;
+}
+
+@keyframes healPulse {
+  0% { opacity: 1; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.5); }
 }

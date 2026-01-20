@@ -26,6 +26,55 @@ window.gameInterval = null;
 window.activeCpuGameInstance = null;
 
 /* ==================================================
+   FULLSCREEN SUPPORT - AUTOMÁTICO
+   ================================================== */
+function enterFullscreen() {
+  const overlay = document.getElementById('game-overlay');
+  if (!overlay) return;
+
+  // Agregar clase fullscreen
+  overlay.classList.add('fullscreen-mode');
+
+  // Intentar fullscreen nativo del navegador
+  if (overlay.requestFullscreen) {
+    overlay.requestFullscreen().catch(() => {});
+  } else if (overlay.webkitRequestFullscreen) {
+    overlay.webkitRequestFullscreen();
+  } else if (overlay.msRequestFullscreen) {
+    overlay.msRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+  const overlay = document.getElementById('game-overlay');
+  if (overlay) {
+    overlay.classList.remove('fullscreen-mode');
+  }
+
+  if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+  }
+}
+
+// Escuchar cambios de fullscreen del navegador
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+function handleFullscreenChange() {
+  const overlay = document.getElementById('game-overlay');
+  const isNativeFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+
+  if (!isNativeFullscreen && overlay) {
+    overlay.classList.remove('fullscreen-mode');
+  }
+}
+
+/* ==================================================
    GAMEPAD / ARCADE SUPPORT
    ================================================== */
 window.gamepadState = {
@@ -406,12 +455,36 @@ prevBtn.onclick = () => {
 };
 
 // ---- Toggle ML CPU ----
+// Sistema centralizado para manejar el toggle de IA
+// Cada juego registra su callback y lo limpia al cerrar
+window.currentGameIACallback = null;
+
 window.toggleMLMode = function () {
-  if (window.activeCpuGameInstance) {
+  const mlToggle = document.getElementById('mlToggle');
+  const isChecked = mlToggle ? mlToggle.checked : false;
+
+  // Si hay un callback de juego registrado, llamarlo
+  if (typeof window.currentGameIACallback === 'function') {
+    window.currentGameIACallback(isChecked);
+    return;
+  }
+
+  // Fallback para CPU Defender (usa sistema diferente)
+  if (window.activeCpuGameInstance && typeof window.activeCpuGameInstance.setMLMode === 'function') {
     setTimeout(() => {
-      window.activeCpuGameInstance.setMLMode(document.getElementById('mlToggle').checked);
+      window.activeCpuGameInstance.setMLMode(isChecked);
     }, 50);
   }
+};
+
+// Función para que los juegos registren su callback de IA
+window.registerIACallback = function(callback) {
+  window.currentGameIACallback = callback;
+};
+
+// Función para limpiar el callback al cerrar el juego
+window.unregisterIACallback = function() {
+  window.currentGameIACallback = null;
 };
 
 // ---- Abrir Minijuego (solo abre overlay y muestra intro) ----
@@ -434,6 +507,9 @@ window.playMinigame = async function (type) {
 
   overlay.classList.add('active');
   if (title) title.innerText = type.toUpperCase();
+
+  // Activar fullscreen automáticamente
+  enterFullscreen();
 
   // Ocultar botón de IA durante la intro
   const mlContainer = document.querySelector('.ml-switch-container');
@@ -478,8 +554,19 @@ window.closeMinigame = function () {
     window.activeCpuGameInstance = null;
   }
 
+  // Limpiar callback de IA del juego
+  window.unregisterIACallback();
+
+  // Salir de fullscreen
+  exitFullscreen();
+
+  const overlay = document.getElementById('game-overlay');
   document.getElementById('game-area').innerHTML = '';
-  document.getElementById('game-overlay').classList.remove('active');
+  overlay.classList.remove('active');
+
+  // Resetear el toggle de IA
+  const mlToggle = document.getElementById('mlToggle');
+  if (mlToggle) mlToggle.checked = false;
 
   // Vuelve al lobby
   withAudio((am) => am.returnToLobby());
@@ -575,15 +662,49 @@ function skipSplashAndStart() {
 async function startAudioNow() {
   if (audioStarted) return;
   audioStarted = true;
-  
+
   const am = window.audioManager;
   if (!am) return;
-  
+
   const unlocked = await am.unlockAndPrime();
   if (unlocked) {
     am.startLobbyNow();
+  } else {
+    // Si falló, permitir reintento en próxima interacción
+    audioStarted = false;
   }
 }
+
+// Función para reintentar el audio en cualquier interacción
+function retryAudioIfNeeded(e) {
+  const am = window.audioManager;
+  if (!am || am.isMuted) return;
+
+  // Ignorar clicks en controles del juego para evitar interferencias
+  if (e && e.target) {
+    const target = e.target;
+    if (target.id === 'mlToggle' ||
+        target.closest('.ml-switch-container') ||
+        target.closest('#game-area') ||
+        target.tagName === 'CANVAS') {
+      return;
+    }
+  }
+
+  // Si el splash ya pasó pero el audio no está funcionando
+  if (splashSkipped && !am.unlocked) {
+    am.forceStart();
+  } else if (splashSkipped && am.unlocked) {
+    // Verificar si el audio está pausado cuando no debería
+    const active = am._active();
+    if (active && active.paused && am.activeType) {
+      am._ensureLobbyPlaying();
+    }
+  }
+}
+
+// Escuchar clicks en el documento para reintentar audio si es necesario
+document.addEventListener('click', retryAudioIfNeeded, { once: false });
 
 // Escuchar ESPACIO en teclado para splash
 document.addEventListener('keydown', (e) => {
@@ -617,15 +738,17 @@ if (muteBtn) {
     const am = window.audioManager;
     if (!am) return;
 
-    if (!am.unlocked && am.isMuted) {
+    if (!am.unlocked || am.isMuted) {
+      // Si está muteado o no desbloqueado, forzar inicio
       am.isMuted = false;
       localStorage.setItem("muted", "false");
-      await am.unlockAndPrime();
-      am.startLobbyNow();
+      am._applyMuteTo(am.A);
+      am._applyMuteTo(am.B);
+      await am.forceStart();
     } else {
       am.toggleMute();
     }
-    
+
     updateMuteButton();
     setSettingsMenuOpen(false);
   });
