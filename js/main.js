@@ -577,12 +577,22 @@ playBtn.addEventListener('click', () => {
   const cards = getActiveCards();
   const name = cards[currentIndex].querySelector('h3').innerText.toLowerCase();
 
-  if (currentListId === 'list-pro') return alert("¡BLOQUEADO!");
+  // 👉 ARCADE PRO
+  if (currentListId === 'list-pro') {
+    if (name.includes('feed the monster')) {
+      window.open('http://localhost:3000', '_blank');
+    } else {
+      alert("Juego Arcade Pro no disponible aún");
+    }
+    return;
+  }
 
+  // 👉 MINIJUEGOS
   if (name.includes('pong')) window.playMinigame('pong');
   else if (name.includes('snake')) window.playMinigame('snake');
   else if (name.includes('cpu')) window.playMinigame('cpu');
 });
+
 
 // ==================================================
 //  Menú ⚙
