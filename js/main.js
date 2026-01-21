@@ -541,6 +541,8 @@ playBtn.addEventListener('click', () => {
   if (currentListId === 'list-pro') {
     if (name.includes('feed the monster')) {
       window.open('http://localhost:3000', '_blank');
+    } else if (name.includes('quizz') || name.includes('race')) {
+      window.open('http://172.29.80.241:3000/', '_blank');
     } else {
       alert("Juego Arcade Pro no disponible aún");
     }
