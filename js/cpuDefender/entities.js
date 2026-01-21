@@ -146,12 +146,10 @@ class PlayerTank {
     if (inputY !== 0) this.vy += inputY * this.acceleration;
 
     // 2. FRICCIÓN (Frenado)
-    // Si NO hay input, la fricción actúa más fuerte para detenerte rápido
-    // Si HAY input, la fricción evita que aceleres infinitamente
     this.vx *= this.friction;
     this.vy *= this.friction;
 
-    // 3. LIMITAR VELOCIDAD (Clamping)
+    // 3. LIMITAR VELOCIDAD 
     const currentSpeed = Math.hypot(this.vx, this.vy);
     if (currentSpeed > this.maxSpeed) {
         // Normalizar y escalar a maxSpeed
@@ -160,7 +158,7 @@ class PlayerTank {
         this.vy *= scale;
     }
 
-    // 4. STOP TOTAL (Evitar micro-deslizamiento final)
+    // 4. STOP TOTAL 
     if (Math.abs(this.vx) < 0.1) this.vx = 0;
     if (Math.abs(this.vy) < 0.1) this.vy = 0;
 
@@ -168,7 +166,7 @@ class PlayerTank {
     this.x += this.vx;
     this.y += this.vy;
 
-    // 6. LÍMITES DE PANTALLA (Rebote suave opcional, aquí es tope seco)
+    // 6. LÍMITES DE PANTALLA 
     if (this.x < 25) { this.x = 25; this.vx = 0; }
     if (this.x > w - 25) { this.x = w - 25; this.vx = 0; }
     if (this.y < 100) { this.y = 100; this.vy = 0; }
@@ -180,13 +178,8 @@ class PlayerTank {
   }
 
   draw(ctx) {
-    // === TANQUE FUTURISTA CYBERPUNK ===
-
-    // Sombra/glow del tanque
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 15;
-
-    // Cuerpo principal (hexagonal futurista)
     ctx.fillStyle = '#1a3a4a';
     ctx.beginPath();
     ctx.moveTo(this.x - 22, this.y);
@@ -197,26 +190,20 @@ class PlayerTank {
     ctx.lineTo(this.x - 18, this.y + 12);
     ctx.closePath();
     ctx.fill();
-
-    // Borde neón del cuerpo
     ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.shadowBlur = 0;
-
-    // Cañón superior (con glow)
     const cannonGlow = ctx.createLinearGradient(this.x, this.y - 28, this.x, this.y - 8);
     cannonGlow.addColorStop(0, '#00ffff');
     cannonGlow.addColorStop(1, '#0088aa');
     ctx.fillStyle = cannonGlow;
     ctx.fillRect(this.x - 4, this.y - 28, 8, 20);
-
-    // Punta del cañón (brillante)
     ctx.fillStyle = '#00ffff';
     ctx.fillRect(this.x - 3, this.y - 32, 6, 5);
 
-    // Orugas laterales (estilo tech)
+    // Orugas laterales 
     const trackGrad = ctx.createLinearGradient(this.x - 26, this.y, this.x - 18, this.y);
     trackGrad.addColorStop(0, '#333');
     trackGrad.addColorStop(0.5, '#555');

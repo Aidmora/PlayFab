@@ -11,7 +11,6 @@ function cpuShowAnnouncement(title, subtitle, duration = 2000) {
 
   a.style.display = 'flex';
   setTimeout(() => {
-    // Protege por si el overlay ya se cerró
     const node = document.getElementById('challenge-announcement');
     if (node) node.style.display = 'none';
   }, duration);
