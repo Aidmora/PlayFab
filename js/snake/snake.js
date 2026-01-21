@@ -1,9 +1,10 @@
 /* ==================================================
-   SNAKE RETRO
+   SNAKE RETRO with AI GUIDE MODE
    Con soporte para ARCADE/GAMEPAD
    - Palanca: mover serpiente
    - Pantalla de Game Over
    - Reinicio con SELECT/START o ENTER
+   - AI MODE: Guía visual del mejor camino
    ================================================== */
 
 function startSnake() {
@@ -35,8 +36,13 @@ function startSnake() {
   let gameOver = false;
   let gameSpeed = 100;
 
+  // AI MODE variables
+  let aiModeEnabled = false;
+  let aiPath = [];
+
   // Estado previo del gamepad para detectar cambios
   let prevGamepadDir = { x: 0, y: 0 };
+  let prevGamepadButtons = {};
 
   function initSnake() {
     snake = [
@@ -66,16 +72,260 @@ function startSnake() {
     gameSpeed = 100;
     running = true;
     gameOver = false;
+    aiPath = [];
     updateScore(score);
     
     clearInterval(window.gameInterval);
     startGameLoop();
   }
 
+  // ============================================================
+  // A* PATHFINDING ALGORITHM
+  // ============================================================
+  
+  function heuristic(a, b) {
+    // Manhattan distance
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  }
+
+  function getNeighbors(node) {
+    const neighbors = [];
+    const directions = [
+      { x: 0, y: -1 }, // up
+      { x: 0, y: 1 },  // down
+      { x: -1, y: 0 }, // left
+      { x: 1, y: 0 }   // right
+    ];
+
+    for (const dir of directions) {
+      const nx = node.x + dir.x;
+      const ny = node.y + dir.y;
+
+      // Check boundaries
+      if (nx < 0 || nx >= GRID_WIDTH || ny < 0 || ny >= GRID_HEIGHT) {
+        continue;
+      }
+
+      // Check collision with snake body (excluding tail since it will move)
+      const isSnakeBody = snake.slice(0, -1).some(seg => seg.x === nx && seg.y === ny);
+      if (isSnakeBody) {
+        continue;
+      }
+
+      neighbors.push({ x: nx, y: ny });
+    }
+
+    return neighbors;
+  }
+
+  function findPath(start, goal) {
+    const openSet = [start];
+    const cameFrom = new Map();
+    const gScore = new Map();
+    const fScore = new Map();
+
+    const key = (node) => `${node.x},${node.y}`;
+
+    gScore.set(key(start), 0);
+    fScore.set(key(start), heuristic(start, goal));
+
+    while (openSet.length > 0) {
+      // Find node with lowest fScore
+      let current = openSet[0];
+      let currentIdx = 0;
+      for (let i = 1; i < openSet.length; i++) {
+        if (fScore.get(key(openSet[i])) < fScore.get(key(current))) {
+          current = openSet[i];
+          currentIdx = i;
+        }
+      }
+
+      // Goal reached
+      if (current.x === goal.x && current.y === goal.y) {
+        const path = [];
+        let temp = current;
+        while (cameFrom.has(key(temp))) {
+          path.unshift(temp);
+          temp = cameFrom.get(key(temp));
+        }
+        return path;
+      }
+
+      openSet.splice(currentIdx, 1);
+
+      const neighbors = getNeighbors(current);
+      for (const neighbor of neighbors) {
+        const tentativeGScore = gScore.get(key(current)) + 1;
+        const neighborKey = key(neighbor);
+
+        if (!gScore.has(neighborKey) || tentativeGScore < gScore.get(neighborKey)) {
+          cameFrom.set(neighborKey, current);
+          gScore.set(neighborKey, tentativeGScore);
+          fScore.set(neighborKey, tentativeGScore + heuristic(neighbor, goal));
+
+          if (!openSet.some(n => n.x === neighbor.x && n.y === neighbor.y)) {
+            openSet.push(neighbor);
+          }
+        }
+      }
+    }
+
+    // No path found
+    return null;
+  }
+
+  function updateAIPath() {
+    if (!aiModeEnabled || gameOver) {
+      aiPath = [];
+      return;
+    }
+
+    const head = snake[0];
+    const path = findPath(head, food);
+    aiPath = path || [];
+  }
+
+  // ============================================================
+  // DRAW AI GUIDE
+  // ============================================================
+  
+  function drawAIGuide() {
+    if (!aiModeEnabled || aiPath.length === 0) return;
+
+    const head = snake[0];
+    const pathLength = aiPath.length;
+
+    // Calculate overall distance from snake to fruit
+    // Shorter path = closer to fruit = more transparent
+    // Longer path = farther from fruit = more opaque
+    const maxDistance = 30; // Maximum expected path length for scaling
+    const normalizedDistance = Math.min(pathLength / maxDistance, 1);
+    
+    // Exponential fade based on total path length
+    // When far (long path): opacity ≈ 1.0 (fully visible)
+    // When close (short path): opacity ≈ 0.0 (invisible)
+    const globalOpacity = Math.pow(normalizedDistance, 2.5);
+    
+    // Skip drawing if too transparent
+    if (globalOpacity < 0.05) return;
+
+    // Draw all path segments with the same opacity
+    for (let i = 0; i < pathLength; i++) {
+      const node = aiPath[i];
+      const nextNode = i < pathLength - 1 ? aiPath[i + 1] : null;
+
+      // Draw line segment
+      if (nextNode) {
+        const x1 = node.x * GRID_SIZE + GRID_SIZE / 2;
+        const y1 = node.y * GRID_SIZE + GRID_SIZE / 2;
+        const x2 = nextNode.x * GRID_SIZE + GRID_SIZE / 2;
+        const y2 = nextNode.y * GRID_SIZE + GRID_SIZE / 2;
+
+        ctx.strokeStyle = `rgba(255, 180, 0, ${globalOpacity})`;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        
+        ctx.shadowColor = `rgba(255, 180, 0, ${globalOpacity * 0.5})`;
+        ctx.shadowBlur = 8;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      // Draw guide dots
+      const x = node.x * GRID_SIZE + GRID_SIZE / 2;
+      const y = node.y * GRID_SIZE + GRID_SIZE / 2;
+      
+      ctx.fillStyle = `rgba(255, 180, 0, ${globalOpacity})`;
+      ctx.shadowColor = `rgba(255, 180, 0, ${globalOpacity})`;
+      ctx.shadowBlur = 6;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.shadowBlur = 0;
+  }
+
+  // ============================================================
+  // AI MODE TOGGLE - Using existing ML toggle from HTML
+  // ============================================================
+  
+  let toggleChangeHandler = null;
+  let toggleKeydownHandler = null;
+  
+  function setupAIToggle() {
+    const mlToggle = document.getElementById('mlToggle');
+    const mlContainer = document.querySelector('.ml-switch-container');
+    
+    if (!mlToggle) {
+      console.warn('ML Toggle not found - AI mode will not be available');
+      return;
+    }
+    
+    // Make sure the toggle container is visible
+    if (mlContainer) {
+      mlContainer.style.display = 'flex';
+    }
+    
+    // Reset toggle state when Snake starts
+    mlToggle.checked = false;
+    aiModeEnabled = false;
+    aiPath = [];
+    
+    // Remove previous handlers if they exist
+    if (toggleChangeHandler) {
+      mlToggle.removeEventListener('change', toggleChangeHandler);
+    }
+    if (toggleKeydownHandler) {
+      mlToggle.removeEventListener('keydown', toggleKeydownHandler);
+    }
+    
+    // Prevent spacebar from toggling the checkbox
+    toggleKeydownHandler = (e) => {
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    mlToggle.addEventListener('keydown', toggleKeydownHandler);
+    
+    // Create and store the change handler
+    toggleChangeHandler = (e) => {
+      aiModeEnabled = e.target.checked;
+      
+      if (aiModeEnabled) {
+        updateAIPath();
+        console.log('AI Guide Mode ENABLED');
+      } else {
+        aiPath = [];
+        console.log('AI Guide Mode DISABLED');
+      }
+    };
+    
+    // Add the event listener
+    mlToggle.addEventListener('change', toggleChangeHandler);
+  }
+
+  setupAIToggle();
+
   // Controles de teclado
   const handleKeyDown = (e) => {
     if (gameOver && (e.key === 'Enter' || e.key === ' ')) {
       restartGame();
+      return;
+    }
+
+    // Toggle AI Mode with B key
+    if (e.key === 'b' || e.key === 'B') {
+      const mlToggle = document.getElementById('mlToggle');
+      if (mlToggle && !gameOver) {
+        mlToggle.checked = !mlToggle.checked;
+        mlToggle.dispatchEvent(new Event('change'));
+      }
       return;
     }
 
@@ -130,6 +380,20 @@ function startSnake() {
         return;
       }
     }
+
+    // Toggle AI Mode con botón B (índice 2)
+    const bPressed = gp.buttons[ARCADE_BUTTONS.B]?.pressed;
+    const bWasPressed = prevGamepadButtons[ARCADE_BUTTONS.B];
+    
+    if (bPressed && !bWasPressed && !gameOver) {
+      const mlToggle = document.getElementById('mlToggle');
+      if (mlToggle) {
+        mlToggle.checked = !mlToggle.checked;
+        mlToggle.dispatchEvent(new Event('change'));
+      }
+    }
+    
+    prevGamepadButtons[ARCADE_BUTTONS.B] = bPressed;
 
     // Leer palanca (joystick)
     const axisX = gp.axes[0];
@@ -352,9 +616,15 @@ function startSnake() {
         clearInterval(window.gameInterval);
         startGameLoop();
       }
+      
+      // Update AI path when food is eaten
+      updateAIPath();
     } else {
       snake.pop();
     }
+
+    // Update AI path every frame
+    updateAIPath();
 
     // Render
     ctx.fillStyle = '#0a0a0a';
@@ -362,6 +632,7 @@ function startSnake() {
 
     drawGrid();
     drawFood();
+    drawAIGuide(); // Draw guide BEFORE snake so it appears behind
     drawSnake();
     drawHUD();
   }
@@ -381,6 +652,23 @@ function startSnake() {
   window.closeMinigame = function() {
     document.removeEventListener('keydown', handleKeyDown);
     clearInterval(window.gameInterval);
+    
+    // Clean up toggle listeners and reset state
+    const mlToggle = document.getElementById('mlToggle');
+    if (mlToggle) {
+      if (toggleChangeHandler) {
+        mlToggle.removeEventListener('change', toggleChangeHandler);
+      }
+      if (toggleKeydownHandler) {
+        mlToggle.removeEventListener('keydown', toggleKeydownHandler);
+      }
+      mlToggle.checked = false;
+    }
+    
+    // Reset AI state
+    aiModeEnabled = false;
+    aiPath = [];
+    
     if (originalClose) originalClose();
   };
 }
