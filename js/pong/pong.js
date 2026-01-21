@@ -91,6 +91,38 @@ function startPong() {
     showIANotification(iaMode);
   }
 
+
+
+  async function loadPongModel() {
+    try {
+      console.log("Cargando modelo de PONG...");
+      this.model = await tf.loadLayersModel('./model/pong/model.json');
+
+      if (!this.model) {
+        throw new Error("Modelo es null después de la carga");
+      }
+      const inputShape = this.model.inputs?.[0]?.shape;
+      console.log(" Forma de entrada del modelo:", inputShape);
+
+      this.isLoaded = true;
+      console.log(" IA de PONG CARGADA Y LISTA.");
+      return true;
+
+    } catch (error) {
+      console.error(" ERROR CARGANDO IA:", error);
+      this.loadAttempts++;
+
+      if (this.loadAttempts < this.maxAttempts) {
+        console.log(` Reintentando... (${this.loadAttempts}/${this.maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return this.loadPongModel();
+      }
+      return false;
+    }
+  }
+
+loadPongModel();
+
   function showIANotification(enabled) {
     // Remover notificaciones previas
     const gameArea = document.getElementById('game-area');
