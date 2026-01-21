@@ -1,13 +1,3 @@
-/* tutorial.js
-   Maneja la lógica de la ventana modal de ayuda/instrucciones.
-
-   ✅ Soporta:
-   - Botón viejo: #helpBtn (aunque esté hidden)
-   - Botón nuevo del menú: #openHelpBtn
-   - Llamadas directas: openTutorial() / closeTutorial()
-   - ARCADE: X o B para cerrar, R para abrir desde menú
-*/
-
 document.addEventListener('DOMContentLoaded', () => {
   // Elementos del DOM
   const helpBtnLegacy = document.getElementById('helpBtn');
@@ -74,10 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && isOpen) hideOverlay();
   });
 
-  // ============================================
-  // SOPORTE ARCADE/GAMEPAD
-  // X (botón 0) o B (botón 2) para cerrar
-  // ============================================
   const ARCADE_BUTTONS = {
     X: 0,
     B: 2

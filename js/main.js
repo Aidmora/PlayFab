@@ -1,15 +1,3 @@
-/* ==================================================
-   MAIN.JS
-   - Soporte completo para ARCADE/GAMEPAD
-   - Palanca: navegar juegos
-   - SELECT: jugar
-   - X: cerrar juego / salir
-   - Y: abrir menú ayuda
-   - R: tutorial (cuando menú abierto)
-   - B: toggle sonido (cuando menú abierto)
-   - START: iniciar desde splash
-   ================================================== */
-
 let currentIndex = 0;
 let currentListId = 'list-minigames';
 
@@ -25,17 +13,11 @@ const arcadeHint = document.getElementById('arcadeHint');
 window.gameInterval = null;
 window.activeCpuGameInstance = null;
 
-/* ==================================================
-   FULLSCREEN SUPPORT - AUTOMÁTICO
-   ================================================== */
+//Pantalla completa
 function enterFullscreen() {
   const overlay = document.getElementById('game-overlay');
   if (!overlay) return;
-
-  // Agregar clase fullscreen
   overlay.classList.add('fullscreen-mode');
-
-  // Intentar fullscreen nativo del navegador
   if (overlay.requestFullscreen) {
     overlay.requestFullscreen().catch(() => {});
   } else if (overlay.webkitRequestFullscreen) {
@@ -59,8 +41,6 @@ function exitFullscreen() {
     document.msExitFullscreen();
   }
 }
-
-// Escuchar cambios de fullscreen del navegador
 document.addEventListener('fullscreenchange', handleFullscreenChange);
 document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 document.addEventListener('msfullscreenchange', handleFullscreenChange);
@@ -74,9 +54,7 @@ function handleFullscreenChange() {
   }
 }
 
-/* ==================================================
-   GAMEPAD / ARCADE SUPPORT
-   ================================================== */
+//Gamepad
 window.gamepadState = {
   connected: false,
   buttons: {},
@@ -85,42 +63,38 @@ window.gamepadState = {
 
 // Mapeo de botones del arcade
 const ARCADE_BUTTONS = {
-  X: 0,      // Salir / Cerrar
-  A: 1,      // Acción principal
-  B: 2,      // Sonido (en menú) / Curar (en juego)
-  Y: 3,      // Abrir menú ayuda
-  L: 4,      // Modo IA
-  R: 5,      // Tutorial (en menú)
-  SELECT: 8, // Seleccionar juego / Reiniciar
-  START: 9   // Iniciar desde splash / Jugar
+  X: 0,      
+  A: 1,      
+  B: 2,      
+  Y: 3,      
+  L: 4,      
+  R: 5,     
+  SELECT: 8, 
+  START: 9   
 };
 
-// Estado previo para detectar "just pressed"
+// Estado previo 
 let prevButtonState = {};
 let prevAxisState = { left: false, right: false, up: false, down: false };
 
 // Detectar gamepad conectado
 window.addEventListener('gamepadconnected', (e) => {
-  console.log('🎮 Arcade conectado:', e.gamepad.id);
+  console.log(' Arcade conectado:', e.gamepad.id);
   window.gamepadState.connected = true;
-  
-  // Mostrar hint de arcade si existe
   if (arcadeHint) {
     arcadeHint.classList.add('visible');
   }
 });
 
 window.addEventListener('gamepaddisconnected', (e) => {
-  console.log('🎮 Arcade desconectado');
+  console.log(' Arcade desconectado');
   window.gamepadState.connected = false;
-  
-  // Ocultar hint
   if (arcadeHint) {
     arcadeHint.classList.remove('visible');
   }
 });
 
-// Función para verificar si un botón fue RECIÉN presionado
+// Función para verificar si un botón fue Recién presionado
 function isButtonJustPressed(buttonIndex) {
   const gamepads = navigator.getGamepads();
   const gp = gamepads[0];
@@ -132,7 +106,7 @@ function isButtonJustPressed(buttonIndex) {
   return isPressed && !wasPressed;
 }
 
-// Función para verificar si un eje fue RECIÉN movido
+// verificación del eje 
 function isAxisJustMoved(direction) {
   const gamepads = navigator.getGamepads();
   const gp = gamepads[0];
@@ -183,49 +157,42 @@ function gamepadLoop() {
     const isTutorialOpen = tutorialOverlay && (tutorialOverlay.classList.contains('active') || tutorialOverlay.style.display === 'flex');
     const isMenuOpen = isSettingsMenuOpen();
     
-    // === SPLASH: START para comenzar ===
+    //SPLASH 
     if (isInSplash) {
       if (isButtonJustPressed(ARCADE_BUTTONS.START)) {
         skipSplashAndStart();
       }
     }
-    // === TUTORIAL ABIERTO ===
     else if (isTutorialOpen) {
-      // X o B para cerrar tutorial
       if (isButtonJustPressed(ARCADE_BUTTONS.X) || isButtonJustPressed(ARCADE_BUTTONS.B)) {
         window.closeTutorial();
       }
     }
-    // === MENÚ SETTINGS ABIERTO ===
+    //Menú
     else if (isMenuOpen) {
-      // R para tutorial
       if (isButtonJustPressed(ARCADE_BUTTONS.R)) {
         setSettingsMenuOpen(false);
         window.openTutorial();
       }
-      // B para toggle sonido
       if (isButtonJustPressed(ARCADE_BUTTONS.B)) {
         muteBtn?.click();
       }
-      // X o Y para cerrar menú
       if (isButtonJustPressed(ARCADE_BUTTONS.X) || isButtonJustPressed(ARCADE_BUTTONS.Y)) {
         setSettingsMenuOpen(false);
       }
     }
-    // === EN JUEGO ===
+    //Juego
     else if (isInGame) {
-      // X para cerrar/salir del juego
       if (isButtonJustPressed(ARCADE_BUTTONS.X)) {
         window.closeMinigame();
       }
-      // Y para abrir ayuda incluso en juego
       if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
         window.openTutorial();
       }
     }
-    // === EN MENÚ PRINCIPAL ===
+    // Menú principal 
     else {
-      // Palanca izquierda/derecha para navegar juegos
+      //Moven entre juegos
       if (isAxisJustMoved('left')) {
         prevBtn.click();
       }
@@ -233,12 +200,12 @@ function gamepadLoop() {
         nextBtn.click();
       }
 
-      // Solo SELECT para jugar (no START)
+      // select para jugar
       if (isButtonJustPressed(ARCADE_BUTTONS.SELECT)) {
         playBtn.click();
       }
 
-      // Y para abrir menú de ayuda
+      // Y - Menú de ayuda
       if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
         setSettingsMenuOpen(!isSettingsMenuOpen());
       }
@@ -248,13 +215,9 @@ function gamepadLoop() {
   updatePrevState();
   requestAnimationFrame(gamepadLoop);
 }
-
-// Iniciar loop del gamepad
 requestAnimationFrame(gamepadLoop);
 
-/* ==================================================
-   INTRO POR JUEGO - ANIMACIÓN ARCADE
-   ================================================== */
+//Intro del juego 
 window.__gameIntroTimeout = null;
 window.__gameRunToken = 0;
 
@@ -344,8 +307,7 @@ async function showGameIntro(type) {
   if (!intro || !introTitle) return;
 
   introTitle.textContent = getGameIntroLabel(type);
-
-  // Agregar controles del juego
+  //Controles del juego
   if (introControls) {
     introControls.innerHTML = getGameControls(type);
   }
@@ -353,10 +315,10 @@ async function showGameIntro(type) {
   intro.classList.add('active');
   intro.setAttribute('aria-hidden', 'false');
 
-  // Esperar a que el usuario presione START para continuar
+  //  START para continuar
   return new Promise((resolve) => {
     let resolved = false;
-    let buttonWasReleased = false; // Para evitar detectar el mismo press del menú
+    let buttonWasReleased = false; 
 
     const checkGamepad = () => {
       if (resolved) return;
@@ -366,13 +328,9 @@ async function showGameIntro(type) {
 
       if (gp) {
         const startPressed = gp.buttons[ARCADE_BUTTONS.START]?.pressed || false;
-
-        // Esperar a que se suelte el botón primero
         if (!startPressed && !buttonWasReleased) {
           buttonWasReleased = true;
         }
-
-        // Solo detectar nueva presión después de que se haya soltado
         if (startPressed && buttonWasReleased) {
           resolved = true;
           hideIntro();
@@ -454,22 +412,16 @@ prevBtn.onclick = () => {
   updateGallery();
 };
 
-// ---- Toggle ML CPU ----
-// Sistema centralizado para manejar el toggle de IA
-// Cada juego registra su callback y lo limpia al cerrar
+// ML
 window.currentGameIACallback = null;
 
 window.toggleMLMode = function () {
   const mlToggle = document.getElementById('mlToggle');
   const isChecked = mlToggle ? mlToggle.checked : false;
-
-  // Si hay un callback de juego registrado, llamarlo
   if (typeof window.currentGameIACallback === 'function') {
     window.currentGameIACallback(isChecked);
     return;
   }
-
-  // Fallback para CPU Defender (usa sistema diferente)
   if (window.activeCpuGameInstance && typeof window.activeCpuGameInstance.setMLMode === 'function') {
     setTimeout(() => {
       window.activeCpuGameInstance.setMLMode(isChecked);
@@ -477,17 +429,15 @@ window.toggleMLMode = function () {
   }
 };
 
-// Función para que los juegos registren su callback de IA
 window.registerIACallback = function(callback) {
   window.currentGameIACallback = callback;
 };
 
-// Función para limpiar el callback al cerrar el juego
 window.unregisterIACallback = function() {
   window.currentGameIACallback = null;
 };
 
-// ---- Abrir Minijuego (solo abre overlay y muestra intro) ----
+// Abrir Minijuego 
 window.playMinigame = async function (type) {
   const overlay = document.getElementById('game-overlay');
   const gameArea = document.getElementById('game-area');
@@ -514,18 +464,15 @@ window.playMinigame = async function (type) {
   // Ocultar botón de IA durante la intro
   const mlContainer = document.querySelector('.ml-switch-container');
   if (mlContainer) mlContainer.style.display = 'none';
+  //Mostrar intro
 
-  // UI: mostrar intro y ESPERAR a que el usuario presione SELECT
   await showGameIntro(type);
-
-  // Si se cerró o se inició otro juego durante la intro, aborta
   if (window.__gameRunToken !== runToken) return;
   if (!overlay.classList.contains('active')) return;
-
-  // Ahora SÍ iniciar la música del juego (después de SELECT en intro)
+// Iniciar audio de juego
   withAudio((am) => am.playGameTrack(type));
 
-  // Mostrar botón de IA solo para pong y snake (no para CPU)
+  // Mostrar botón de IA
   if (type === 'pong' || type === 'snake') {
     if (mlContainer) mlContainer.style.display = 'flex';
   }
@@ -553,31 +500,24 @@ window.closeMinigame = function () {
     window.activeCpuGameInstance.destroy();
     window.activeCpuGameInstance = null;
   }
-
-  // Limpiar callback de IA del juego
   window.unregisterIACallback();
-
-  // Salir de fullscreen
   exitFullscreen();
 
   const overlay = document.getElementById('game-overlay');
   document.getElementById('game-area').innerHTML = '';
   overlay.classList.remove('active');
-
-  // Resetear el toggle de IA
   const mlToggle = document.getElementById('mlToggle');
   if (mlToggle) mlToggle.checked = false;
 
-  // Vuelve al lobby
   withAudio((am) => am.returnToLobby());
 };
 
-// ---- Botón JUGAR ----
+// Botón JUGAR 
 playBtn.addEventListener('click', () => {
   const cards = getActiveCards();
   const name = cards[currentIndex].querySelector('h3').innerText.toLowerCase();
 
-  // 👉 ARCADE PRO
+  //  ARCADE PRO
   if (currentListId === 'list-pro') {
     if (name.includes('feed the monster')) {
       window.open('http://localhost:3000', '_blank');
@@ -587,22 +527,18 @@ playBtn.addEventListener('click', () => {
     return;
   }
 
-  // 👉 MINIJUEGOS
+  //  MINIJUEGOS
   if (name.includes('pong')) window.playMinigame('pong');
   else if (name.includes('snake')) window.playMinigame('snake');
   else if (name.includes('cpu')) window.playMinigame('cpu');
 });
 
 
-// ==================================================
-//  Menú ⚙
-// ==================================================
+// Menú
 function setSettingsMenuOpen(open) {
   if (!settingsMenu) return;
   settingsMenu.classList.toggle('open', open);
   settingsMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
-  
-  // Ocultar/mostrar el aviso flotante arcade (solo si gamepad está conectado)
   if (arcadeHint && window.gamepadState.connected) {
     if (open) {
       arcadeHint.classList.remove('visible');
@@ -641,13 +577,9 @@ if (openHelpBtn) {
   });
 }
 
-// ==================================================
-//  AUDIO: SOLO con START (arcade) o ESPACIO (teclado) en SPLASH
-// ==================================================
+//Audio solo cuando se presiona Start - Splash
 let audioStarted = false;
 let splashSkipped = false;
-
-// Función para saltar splash e iniciar audio
 function skipSplashAndStart() {
   if (splashSkipped) return;
   splashSkipped = true;
@@ -661,7 +593,6 @@ function skipSplashAndStart() {
 
     setTimeout(() => {
       loader.remove();
-      // Iniciar audio
       startAudioNow();
     }, 500);
   } else {
@@ -680,17 +611,13 @@ async function startAudioNow() {
   if (unlocked) {
     am.startLobbyNow();
   } else {
-    // Si falló, permitir reintento en próxima interacción
     audioStarted = false;
   }
 }
 
-// Función para reintentar el audio en cualquier interacción
 function retryAudioIfNeeded(e) {
   const am = window.audioManager;
   if (!am || am.isMuted) return;
-
-  // Ignorar clicks en controles del juego para evitar interferencias
   if (e && e.target) {
     const target = e.target;
     if (target.id === 'mlToggle' ||
@@ -701,11 +628,9 @@ function retryAudioIfNeeded(e) {
     }
   }
 
-  // Si el splash ya pasó pero el audio no está funcionando
   if (splashSkipped && !am.unlocked) {
     am.forceStart();
   } else if (splashSkipped && am.unlocked) {
-    // Verificar si el audio está pausado cuando no debería
     const active = am._active();
     if (active && active.paused && am.activeType) {
       am._ensureLobbyPlaying();
@@ -713,10 +638,8 @@ function retryAudioIfNeeded(e) {
   }
 }
 
-// Escuchar clicks en el documento para reintentar audio si es necesario
 document.addEventListener('click', retryAudioIfNeeded, { once: false });
 
-// Escuchar ESPACIO en teclado para splash
 document.addEventListener('keydown', (e) => {
   const loader = document.getElementById('retro-loader');
   const isInSplash = loader && loader.style.opacity !== '0';
@@ -727,7 +650,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Mute button
 const muteBtn = document.getElementById("muteBtn");
 
 function updateMuteButton() {
@@ -739,8 +661,6 @@ function updateMuteButton() {
   const icon = muteBtn.querySelector('.mi-icon');
   if (icon) icon.textContent = muted ? '🔇' : '🔊';
 }
-
-// Esperar a que audioManager exista
 setTimeout(updateMuteButton, 100);
 
 if (muteBtn) {
@@ -764,21 +684,13 @@ if (muteBtn) {
   });
 }
 
-// ==================================================
-//  🎮 SPLASH - Espera START o ESPACIO
-// ==================================================
+// SPLASH - START
 window.addEventListener("load", () => {
   const loader = document.getElementById("retro-loader");
   if (!loader) {
-    // Sin loader, intentar iniciar audio
     startAudioNow();
     return;
   }
-
-  // El splash NO se cierra automáticamente
-  // Solo se cierra con START (arcade) o ESPACIO (teclado)
-  
-  // Timeout máximo de seguridad (10 segundos) por si no hay input
   setTimeout(() => {
     if (!splashSkipped) {
       skipSplashAndStart();
@@ -786,7 +698,6 @@ window.addEventListener("load", () => {
   }, 10000);
 });
 
-// Beep del loader (opcional)
 const beep = new Audio("audio/beep.mp3");
 beep.volume = 0.15;
 

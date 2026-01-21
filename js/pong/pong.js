@@ -1,22 +1,13 @@
-/* ==================================================
-   PONG CON MODO IA
-   - MODO IA OFF: CPU juega a nivel NORMAL fijo
-   - MODO IA ON: CPU adapta dificultad según rendimiento
-   - Toggle con mouse o tecla L (arcade)
-   ================================================== */
-
 function startPong() {
   const { ctx, canvas } = createGameCanvas(600, 400);
 
   const WINNING_SCORE = 5;
-
-  // Mapeo de botones del arcade
   const ARCADE_BUTTONS = {
     X: 0,
     A: 1,
     B: 2,
     Y: 3,
-    L: 4,      // Toggle IA
+    L: 4,      
     R: 5,
     SELECT: 8,
     START: 9
@@ -36,21 +27,19 @@ function startPong() {
   let winner = null;
   
   // === SISTEMA DE IA ===
-  let iaMode = false;  // false = CPU normal fijo, true = CPU adaptativo
+  let iaMode = false;  
   let cpuDifficulty = 0.15; // Dificultad base (NORMAL)
-  const FIXED_DIFFICULTY = 0.15; // Dificultad cuando IA está OFF
+  const FIXED_DIFFICULTY = 0.15; // Dificultad cuando IA 
   
   let playerWinStreak = 0;
   let cpuWinStreak = 0;
   
-  // Control con teclado
   let keys = {};
   let prevLPressed = false;
   
   const handleKeyDown = (e) => {
     keys[e.key] = true;
-    
-    // Toggle IA con tecla L
+  
     if ((e.key === 'l' || e.key === 'L') && !gameOver) {
       toggleIAMode();
     }
@@ -66,11 +55,8 @@ function startPong() {
   
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
-
-  // Sincronizar con el toggle del HTML usando sistema centralizado
   const mlToggle = document.getElementById('mlToggle');
 
-  // Callback que será llamado por toggleMLMode en main.js
   function handleIAToggle(isEnabled) {
     if (isEnabled !== iaMode) {
       iaMode = isEnabled;

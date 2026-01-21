@@ -1,38 +1,19 @@
-/* ==================================================
-   CPU DEFENDER - GAME
-   Depende de:
-   - utils.js: createGameCanvas(), updateScore()
-   - cpuDefender/ai.js: window.CpuDefenderAI
-   - cpuDefender/entities.js: window.PlayerTank, window.CpuBase, etc.
-   - cpuDefender/ui.js: window.cpuShowAnnouncement(), window.cpuSetLoading()
-   ================================================== */
-
 function startCpuDefender() {
   const gameArea = document.getElementById('game-area');
-
-  // Limpieza de seguridad
   const existingCanvas = gameArea.querySelector('canvas');
   if (existingCanvas) existingCanvas.remove();
 
   const existingUi = gameArea.querySelector('.ui-layer');
   if (existingUi) existingUi.remove();
-
-  // Limpiar overlays previos
   const existingOverlays = gameArea.querySelectorAll('.crt-overlay, .vignette-overlay');
   existingOverlays.forEach(o => o.remove());
-
-  // Canvas del juego
   const canvas = document.createElement('canvas');
   canvas.width = 700;
   canvas.height = 600;
   canvas.style.cursor = 'crosshair';
   canvas.style.backgroundColor = '#0a0a1a';
-
-  // SOLUCIÓN 1: Hacer el canvas "enfocable" y darle el foco inmediatamente
   canvas.setAttribute('tabindex', '0');
-  canvas.style.outline = 'none'; // Quitar el borde azul de selección
-
-  // UI layer (botón repair + game over msg + ammo bar)
+  canvas.style.outline = 'none'; 
   const ui = document.createElement('div');
   ui.className = 'ui-layer';
   ui.innerHTML = `
@@ -74,14 +55,12 @@ function startCpuDefender() {
   // Forzamos el foco al canvas para que las teclas las reciba el juego
   canvas.focus();
 
-  // Instancia del juego (global para toggle ML)
+  // Instancia del juego 
   window.activeCpuGameInstance = new CpuGame(canvas);
 
   // Repair button
   const btnRepair = document.getElementById('btn-repair');
   if (btnRepair) btnRepair.onclick = () => window.activeCpuGameInstance.repairCpu();
-  
-  // Si el usuario hace clic fuera y vuelve, asegurar que el canvas recupere el foco
   canvas.addEventListener('click', () => {
       canvas.focus();
   });
@@ -119,21 +98,15 @@ class CpuGame {
     this.ammoBoxSpawnTimer = 0;
 
     // Probabilidades crudas (HUD)
-    this.aiProbabilities = [0.33, 0.33, 0.34]; // EASY, NORMAL, HARD
-
-    // ===== Ruta A: EMA + histéresis + cooldown =====
+    this.aiProbabilities = [0.33, 0.33, 0.34];
     this.aiEma = { easy: 0.33, normal: 0.33, hard: 0.34 };
     this.aiCooldownFrames = 0;
-
-    // UI progreso suave
     this.aiProgressSmooth = 0;
-
-    // alerta ammo bajo
     this.lowAmmoWarned = false;
 
-    // ===== Parámetros Ruta A (AJUSTADO PARA MEJOR PROGRESIÓN) =====
+    // ===== Parámetros =====
     this.AI_EMA_ALPHA = 0.20;
-    this.AI_UP_TH = 0.50;     // ANTES 0.72. Bajado para subir nivel más fácil.
+    this.AI_UP_TH = 0.50;    
     this.AI_DOWN_TH = 0.78;
     this.AI_NORMAL_LOCK = 0.55;
     this.AI_COOLDOWN_SEC = 4;
@@ -189,7 +162,6 @@ class CpuGame {
         return;
       }
 
-      // Disparo Teclado
       if (['z', 'x', 'c', ' ', 'enter'].includes(e.key.toLowerCase())) {
         if (this.state === 'playing' && !this.introSequence && this.shootCooldown <= 0 && this.ammo > 0) {
           this.player.shoot(this);
@@ -344,22 +316,15 @@ class CpuGame {
 
     this.frameCount++;
     if (this.shootCooldown > 0) this.shootCooldown--;
-
-    // ==========================================
-    //  LÓGICA GAMEPAD (ARCADE STICK / MANDO)
-    // ==========================================
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
     const gp = gamepads[0]; // Tomamos el primer mando
 
     let activeInput = { ...this.keys };
 
     if (gp) {
-      // 1. MOVIMIENTO (Palanca / Ejes)
-      // Eje 1 (Vertical): -1 es Arriba, 1 es Abajo
+      // MOVIMIENTO 
       if (gp.axes[1] < -0.5) activeInput['gp_up'] = true;
       if (gp.axes[1] > 0.5)  activeInput['gp_down'] = true;
-
-      // Eje 0 (Horizontal): -1 es Izquierda, 1 es Derecha
       if (gp.axes[0] < -0.5) activeInput['gp_left'] = true;
       if (gp.axes[0] > 0.5)  activeInput['gp_right'] = true;
 
@@ -373,7 +338,7 @@ class CpuGame {
         }
       }
 
-      // 3. REPARAR (Botones 1, 2, 3)
+      // 3. REPARAR 
       const btnRepair = gp.buttons[2]?.pressed;
       if (btnRepair && !this.gamepadRepairLocked) {
         this.repairCpu();
@@ -382,7 +347,7 @@ class CpuGame {
         this.gamepadRepairLocked = false;
       }
 
-      // 4. TOGGLE IA (NUEVO: Botón 4 o Botón 8/Select)
+      // 4. TOGGLE IA 
       const btnToggle = gp.buttons[4]?.pressed;
       if (btnToggle && !this.gamepadAiToggleLocked) {
         this.setMLMode(!this.mlModeActive);
@@ -395,7 +360,7 @@ class CpuGame {
     // Player movement
     this.player.update(activeInput, this.width, this.height);
 
-    // ===== IA + NIVELES (Ruta A) =====
+    // ===== IA + Niveles 
     if (this.mlModeActive && this.ai.isLoaded) {
       if (this.evaluationPhase) {
         this.evaluationTimer++;
@@ -431,8 +396,6 @@ class CpuGame {
 
         if (canChange) {
           if (this.aiEma.normal < this.AI_NORMAL_LOCK) {
-
-            // ===== SUBIR NIVEL =====
             if (this.aiEma.hard >= this.AI_UP_TH) {
               if (this.currentLevel === 1) {
                 this.currentLevel = 2;
@@ -631,19 +594,14 @@ class CpuGame {
   }
 
   drawCircuitBoard(ctx) {
-    // Fondo base cyberpunk oscuro
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
     gradient.addColorStop(0, '#0a0a1a');
     gradient.addColorStop(0.5, '#0d1020');
     gradient.addColorStop(1, '#0a0a1a');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.width, this.height);
-
-    // Grid de circuitos
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-
-    // Líneas verticales
     for (let x = 0; x < this.width; x += 50) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -651,25 +609,18 @@ class CpuGame {
       ctx.stroke();
     }
 
-    // Líneas horizontales
     for (let y = 0; y < this.height; y += 50) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(this.width, y);
       ctx.stroke();
     }
-
-    // Circuitos principales (más brillantes)
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
     ctx.lineWidth = 2;
-
-    // Línea central vertical
     ctx.beginPath();
     ctx.moveTo(this.width / 2, 0);
     ctx.lineTo(this.width / 2, this.height);
     ctx.stroke();
-
-    // Líneas diagonales decorativas
     ctx.strokeStyle = 'rgba(255, 0, 102, 0.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -682,8 +633,6 @@ class CpuGame {
     ctx.moveTo(this.width, this.height);
     ctx.lineTo(this.width - 200, this.height - 200);
     ctx.stroke();
-
-    // Nodos de circuito (puntos brillantes en intersecciones)
     const nodePositions = [
       [100, 100], [200, 150], [350, 100], [500, 150], [600, 100],
       [150, 250], [350, 300], [550, 250],
@@ -691,7 +640,6 @@ class CpuGame {
     ];
 
     nodePositions.forEach(([nx, ny]) => {
-      // Glow exterior
       const nodeGlow = ctx.createRadialGradient(nx, ny, 0, nx, ny, 15);
       nodeGlow.addColorStop(0, 'rgba(0, 255, 255, 0.3)');
       nodeGlow.addColorStop(1, 'rgba(0, 255, 255, 0)');
@@ -699,15 +647,11 @@ class CpuGame {
       ctx.beginPath();
       ctx.arc(nx, ny, 15, 0, Math.PI * 2);
       ctx.fill();
-
-      // Punto central
       ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
       ctx.beginPath();
       ctx.arc(nx, ny, 3, 0, Math.PI * 2);
       ctx.fill();
     });
-
-    // Pulsos de energía animados en las líneas
     const pulseOffset = (this.frameCount * 2) % 100;
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
     ctx.lineWidth = 2;
