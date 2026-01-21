@@ -190,7 +190,7 @@ function gamepadLoop() {
         window.openTutorial();
       }
     }
-    // Menú principal 
+    // Menú principal
     else {
       //Moven entre juegos
       if (isAxisJustMoved('left')) {
@@ -208,6 +208,19 @@ function gamepadLoop() {
       // Y - Menú de ayuda
       if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
         setSettingsMenuOpen(!isSettingsMenuOpen());
+      }
+
+      // A - Cambiar entre Minijuegos y Arcade Pro
+      if (isButtonJustPressed(ARCADE_BUTTONS.A)) {
+        const catButtons = document.querySelectorAll('.cat-btn');
+        if (catButtons.length >= 2) {
+          // Determinar cuál categoría está activa y cambiar a la otra
+          if (currentListId === 'list-minigames') {
+            window.switchCategory('pro', catButtons[1]);
+          } else {
+            window.switchCategory('minigames', catButtons[0]);
+          }
+        }
       }
     }
   }
