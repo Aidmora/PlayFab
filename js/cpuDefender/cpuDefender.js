@@ -17,29 +17,54 @@ function startCpuDefender() {
   const existingUi = gameArea.querySelector('.ui-layer');
   if (existingUi) existingUi.remove();
 
+  // Limpiar overlays previos
+  const existingOverlays = gameArea.querySelectorAll('.crt-overlay, .vignette-overlay');
+  existingOverlays.forEach(o => o.remove());
+
   // Canvas del juego
   const canvas = document.createElement('canvas');
   canvas.width = 700;
   canvas.height = 600;
   canvas.style.cursor = 'crosshair';
-  canvas.style.backgroundColor = '#1a2f1a';
-  
+  canvas.style.backgroundColor = '#0a0a1a';
+
   // SOLUCIÓN 1: Hacer el canvas "enfocable" y darle el foco inmediatamente
-  canvas.setAttribute('tabindex', '0'); 
+  canvas.setAttribute('tabindex', '0');
   canvas.style.outline = 'none'; // Quitar el borde azul de selección
 
-  // UI layer (botón repair + game over msg)
+  // UI layer (botón repair + game over msg + ammo bar)
   const ui = document.createElement('div');
   ui.className = 'ui-layer';
   ui.innerHTML = `
+    <!-- CRT Scanline Overlay -->
+    <div class="crt-overlay"></div>
+
+    <!-- Vignette Effect -->
+    <div class="vignette-overlay"></div>
+
+    <!-- HUD IA Status -->
+    <div class="ai-status-hud" id="ai-status-hud" style="display:none;">
+      <span id="ai-level-text">AI LVL: 1</span>
+      <small id="ai-status-sub">CALIBRANDO...</small>
+    </div>
+
+    <!-- Ammo Bar Visual -->
+    <div class="ammo-bar-container">
+      <span class="ammo-bar-label">AMMO</span>
+      <div class="ammo-bar-track">
+        <div class="ammo-bar-fill" id="ammo-bar-fill" style="width: 100%;"></div>
+      </div>
+    </div>
+
     <div class="hud-controls">
-      <button class="btn-cpu" id="btn-repair">🔧 REPAIR<span>(500)</span></button>
+      <button class="btn-cpu" id="btn-repair">⚡ REPAIR<span>(500 PTS)</span></button>
     </div>
 
     <div id="cpu-game-over" class="cpu-game-over-msg" style="display:none;">
-      <h2 style="color:red;">SYSTEM FAILURE</h2>
+      <h2>SYSTEM FAILURE</h2>
       <p>Score: <span id="final-cpu-score">0</span></p>
-      <p style="font-size:0.7rem; color:#aaa;">Click ✕ to Reset</p>
+      <p class="restart-hint">SELECT/ENTER PARA REINICIAR</p>
+      <p style="font-size:0.6rem; color:#888; margin-top:8px;">X PARA SALIR</p>
     </div>
   `;
 
@@ -146,7 +171,8 @@ class CpuGame {
 
     // Control para evitar spam de botones en mando
     this.gamepadRepairLocked = false;
-    this.gamepadAiToggleLocked = false; // NUEVO: Bloqueo para el botón de IA
+    this.gamepadAiToggleLocked = false; // Bloqueo para el botón de IA
+    this.gamepadRestartLocked = false;  // Bloqueo para el botón de reinicio
 
     // Inputs de Teclado
     this.handleKeyDown = (e) => {
@@ -156,6 +182,12 @@ class CpuGame {
       }
 
       this.keys[e.key.toLowerCase()] = true;
+
+      // Reiniciar con Enter o Space cuando está en game over
+      if (this.state === 'gameover' && (e.key === 'Enter' || e.key === ' ')) {
+        this.restartGame();
+        return;
+      }
 
       // Disparo Teclado
       if (['z', 'x', 'c', ' ', 'enter'].includes(e.key.toLowerCase())) {
@@ -598,22 +630,108 @@ class CpuGame {
     });
   }
 
-  drawCircuitLines(ctx) {
-    ctx.strokeStyle = '#2f4f2f';
-    ctx.lineWidth = 10;
+  drawCircuitBoard(ctx) {
+    // Fondo base cyberpunk oscuro
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+    gradient.addColorStop(0, '#0a0a1a');
+    gradient.addColorStop(0.5, '#0d1020');
+    gradient.addColorStop(1, '#0a0a1a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    // Grid de circuitos
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+
+    // Líneas verticales
+    for (let x = 0; x < this.width; x += 50) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, this.height);
+      ctx.stroke();
+    }
+
+    // Líneas horizontales
+    for (let y = 0; y < this.height; y += 50) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.width, y);
+      ctx.stroke();
+    }
+
+    // Circuitos principales (más brillantes)
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+    ctx.lineWidth = 2;
+
+    // Línea central vertical
     ctx.beginPath();
     ctx.moveTo(this.width / 2, 0);
     ctx.lineTo(this.width / 2, this.height);
-    ctx.moveTo(0, this.height / 2);
-    ctx.lineTo(this.width, this.height / 2);
+    ctx.stroke();
+
+    // Líneas diagonales decorativas
+    ctx.strokeStyle = 'rgba(255, 0, 102, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(200, 200);
+    ctx.moveTo(this.width, 0);
+    ctx.lineTo(this.width - 200, 200);
+    ctx.moveTo(0, this.height);
+    ctx.lineTo(200, this.height - 200);
+    ctx.moveTo(this.width, this.height);
+    ctx.lineTo(this.width - 200, this.height - 200);
+    ctx.stroke();
+
+    // Nodos de circuito (puntos brillantes en intersecciones)
+    const nodePositions = [
+      [100, 100], [200, 150], [350, 100], [500, 150], [600, 100],
+      [150, 250], [350, 300], [550, 250],
+      [100, 400], [250, 450], [450, 450], [600, 400]
+    ];
+
+    nodePositions.forEach(([nx, ny]) => {
+      // Glow exterior
+      const nodeGlow = ctx.createRadialGradient(nx, ny, 0, nx, ny, 15);
+      nodeGlow.addColorStop(0, 'rgba(0, 255, 255, 0.3)');
+      nodeGlow.addColorStop(1, 'rgba(0, 255, 255, 0)');
+      ctx.fillStyle = nodeGlow;
+      ctx.beginPath();
+      ctx.arc(nx, ny, 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Punto central
+      ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+      ctx.beginPath();
+      ctx.arc(nx, ny, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Pulsos de energía animados en las líneas
+    const pulseOffset = (this.frameCount * 2) % 100;
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+    ctx.lineWidth = 2;
+
+    // Pulso horizontal
+    ctx.beginPath();
+    ctx.moveTo(pulseOffset * 7, this.height / 2);
+    ctx.lineTo(pulseOffset * 7 + 30, this.height / 2);
+    ctx.stroke();
+
+    // Pulso vertical
+    ctx.beginPath();
+    ctx.moveTo(this.width / 2, pulseOffset * 6);
+    ctx.lineTo(this.width / 2, pulseOffset * 6 + 30);
     ctx.stroke();
   }
 
   draw() {
     const ctx = this.ctx;
-    ctx.fillStyle = '#1a2f1a';
-    ctx.fillRect(0, 0, this.width, this.height);
-    this.drawCircuitLines(ctx);
+
+    // Fondo cyberpunk con circuitos
+    this.drawCircuitBoard(ctx);
+
+    // Dibujar entidades del juego
     this.cpu.draw(ctx);
     this.tanks.forEach(t => t.draw(ctx));
     this.ammoBoxes.forEach(box => box.draw(ctx));
@@ -623,95 +741,151 @@ class CpuGame {
     this.player.draw(ctx);
     this.particles.forEach(p => p.draw(ctx));
 
-    // HUD Ammo
-    ctx.font = '14px "Press Start 2P"';
-    ctx.textAlign = 'right';
-    const lowAmmo = this.ammo <= 10;
-    ctx.fillStyle = lowAmmo ? '#ff0000' : '#ffcc00';
-    if (lowAmmo && Math.floor(Date.now() / 200) % 2 === 0) ctx.fillStyle = '#ffffff';
-    ctx.fillText(`AMMO: ${this.ammo}/${this.maxAmmo}`, this.width - 20, 30);
+    // Actualizar barra de munición visual (HTML)
+    this.updateAmmoBar();
 
-    // HUD IA
+    // Actualizar HUD de IA (HTML)
+    this.updateAIStatusHud();
+
+    // HUD IA en canvas (barra de probabilidades)
+    if (this.mlModeActive && !this.introSequence && !this.evaluationPhase) {
+      this.drawAIProbabilityBar(ctx);
+    }
+  }
+
+  updateAmmoBar() {
+    const ammoFill = document.getElementById('ammo-bar-fill');
+    if (!ammoFill) return;
+
+    const percentage = (this.ammo / this.maxAmmo) * 100;
+    ammoFill.style.width = `${percentage}%`;
+
+    // Clase para munición baja
+    if (this.ammo <= 10) {
+      ammoFill.classList.add('low');
+    } else {
+      ammoFill.classList.remove('low');
+    }
+  }
+
+  updateAIStatusHud() {
+    const aiHud = document.getElementById('ai-status-hud');
+    const aiLevelText = document.getElementById('ai-level-text');
+    const aiStatusSub = document.getElementById('ai-status-sub');
+
+    if (!aiHud || !aiLevelText || !aiStatusSub) return;
+
     if (this.mlModeActive) {
-      ctx.textAlign = 'left';
-      let lvlText = "AI: CALIBRANDO...";
-      ctx.fillStyle = '#ffff00';
+      aiHud.style.display = 'flex';
 
-      if (!this.evaluationPhase && !this.introSequence) {
-        if (this.currentLevel === 1) { lvlText = "AI LVL: 1"; ctx.fillStyle = '#00ff00'; }
-        if (this.currentLevel === 2) { lvlText = "AI LVL: 2"; ctx.fillStyle = '#ffaa00'; }
-        if (this.currentLevel === 3) { lvlText = "AI LVL: 3"; ctx.fillStyle = '#ff0000'; }
+      if (this.introSequence) {
+        aiLevelText.textContent = 'AI: INIT';
+        aiLevelText.style.color = '#ffff00';
+        aiStatusSub.textContent = 'CARGANDO...';
+      } else if (this.evaluationPhase) {
+        aiLevelText.textContent = 'AI: SCAN';
+        aiLevelText.style.color = '#ffff00';
+        aiStatusSub.textContent = 'CALIBRANDO...';
+      } else {
+        const levelColors = ['#00ff66', '#ffaa00', '#ff0066'];
+        const levelNames = ['FÁCIL', 'NORMAL', 'DIFÍCIL'];
+        aiLevelText.textContent = `AI LVL: ${this.currentLevel}`;
+        aiLevelText.style.color = levelColors[this.currentLevel - 1];
+        aiStatusSub.textContent = levelNames[this.currentLevel - 1];
       }
-      if (this.introSequence) lvlText = "AI: INICIANDO...";
+    } else {
+      aiHud.style.display = 'none';
+    }
+  }
 
-      ctx.fillText(lvlText, 20, 30);
+  drawAIProbabilityBar(ctx) {
+    const barX = 20;
+    const barY = 80;
+    const barWidth = 180;
+    const barHeight = 16;
 
-      if (!this.introSequence && !this.evaluationPhase) {
-        const barX = 20;
-        const barY = 45;
-        const barWidth = 200;
-        const barHeight = 20;
+    // Fondo con borde neón
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(barX, barY, barWidth, barHeight);
+    const easyWidth = barWidth * (this.aiProbabilities[0] ?? 0.33);
+    const normalWidth = barWidth * (this.aiProbabilities[1] ?? 0.33);
+    const hardWidth = barWidth * (this.aiProbabilities[2] ?? 0.34);
 
-        const easyWidth = barWidth * (this.aiProbabilities[0] ?? 0.33);
-        const normalWidth = barWidth * (this.aiProbabilities[1] ?? 0.33);
-        const hardWidth = barWidth * (this.aiProbabilities[2] ?? 0.34);
+    // Barras con gradientes
+    const easyGrad = ctx.createLinearGradient(barX, barY, barX + easyWidth, barY);
+    easyGrad.addColorStop(0, '#00ff66');
+    easyGrad.addColorStop(1, '#00cc44');
+    ctx.fillStyle = easyGrad;
+    ctx.fillRect(barX, barY, easyWidth, barHeight);
 
-        ctx.fillStyle = '#00ff00';
-        ctx.fillRect(barX, barY, easyWidth, barHeight);
-        ctx.fillStyle = '#ffff00';
-        ctx.fillRect(barX + easyWidth, barY, normalWidth, barHeight);
-        ctx.fillStyle = '#ff0000';
-        ctx.fillRect(barX + easyWidth + normalWidth, barY, hardWidth, barHeight);
+    const normalGrad = ctx.createLinearGradient(barX + easyWidth, barY, barX + easyWidth + normalWidth, barY);
+    normalGrad.addColorStop(0, '#ffff00');
+    normalGrad.addColorStop(1, '#ffaa00');
+    ctx.fillStyle = normalGrad;
+    ctx.fillRect(barX + easyWidth, barY, normalWidth, barHeight);
 
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(barX, barY, barWidth, barHeight);
+    const hardGrad = ctx.createLinearGradient(barX + easyWidth + normalWidth, barY, barX + barWidth, barY);
+    hardGrad.addColorStop(0, '#ff6600');
+    hardGrad.addColorStop(1, '#ff0066');
+    ctx.fillStyle = hardGrad;
+    ctx.fillRect(barX + easyWidth + normalWidth, barY, hardWidth, barHeight);
 
-        ctx.font = '8px "Press Start 2P"';
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        ctx.fillText('EASY', barX + 30, barY + 15);
-        ctx.fillText('NORMAL', barX + 100, barY + 15);
-        ctx.fillText('HARD', barX + 170, barY + 15);
+    // Borde neón
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-        if (this.currentLevel < 3) {
-          const progressBarY = barY + 25;
-          const target = Math.min(1, this.aiEma.hard / this.AI_UP_TH);
-          this.aiProgressSmooth += (target - this.aiProgressSmooth) * 0.12;
+    // Labels pequeños
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#000';
+    ctx.textAlign = 'center';
+    if (easyWidth > 25) ctx.fillText('E', barX + easyWidth / 2, barY + 11);
+    if (normalWidth > 25) ctx.fillText('N', barX + easyWidth + normalWidth / 2, barY + 11);
+    if (hardWidth > 25) ctx.fillText('H', barX + easyWidth + normalWidth + hardWidth / 2, barY + 11);
 
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-          ctx.fillRect(barX, progressBarY, barWidth, 10);
+    // Barra de progreso de upgrade
+    if (this.currentLevel < 3) {
+      const progressBarY = barY + 22;
+      const target = Math.min(1, this.aiEma.hard / this.AI_UP_TH);
+      this.aiProgressSmooth += (target - this.aiProgressSmooth) * 0.12;
 
-          const isReady = this.aiEma.hard >= this.AI_UP_TH;
-          const pulse = Math.sin(Date.now() * 0.01) * 0.08 + 0.92;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.fillRect(barX, progressBarY, barWidth, 8);
 
-          ctx.fillStyle = isReady ? '#ff0000' : '#ffaa00';
-          if (isReady) ctx.globalAlpha = pulse;
-          ctx.fillRect(barX, progressBarY, barWidth * this.aiProgressSmooth, 10);
-          ctx.globalAlpha = 1;
+      const isReady = this.aiEma.hard >= this.AI_UP_TH;
+      const pulse = Math.sin(Date.now() * 0.01) * 0.15 + 0.85;
 
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(barX, progressBarY, barWidth, 10);
+      // Gradiente para la barra de progreso
+      const progressGrad = ctx.createLinearGradient(barX, progressBarY, barX + barWidth * this.aiProgressSmooth, progressBarY);
+      progressGrad.addColorStop(0, isReady ? '#ff0066' : '#00ffff');
+      progressGrad.addColorStop(1, isReady ? '#ff00ff' : '#00ff66');
 
-          ctx.font = '7px "Press Start 2P"';
-          ctx.textAlign = 'left';
-          ctx.fillStyle = isReady ? '#ff0000' : '#ffffff';
+      ctx.fillStyle = progressGrad;
+      if (isReady) ctx.globalAlpha = pulse;
+      ctx.fillRect(barX, progressBarY, barWidth * this.aiProgressSmooth, 8);
+      ctx.globalAlpha = 1;
 
-          const pct = Math.floor(this.aiProgressSmooth * 100);
-          const txt = isReady ? 'READY!' : `UPGRADE: ${pct}%`;
-          ctx.fillText(txt, barX, progressBarY + 22);
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, progressBarY, barWidth, 8);
 
-          if (this.aiCooldownFrames > 0) {
-            ctx.fillStyle = '#aaa';
-            ctx.fillText(`COOLDOWN`, barX + 120, progressBarY + 22);
-          }
-        }
+      // Texto de upgrade
+      ctx.font = '6px "Press Start 2P"';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isReady ? '#ff0066' : '#00ffff';
+
+      const pct = Math.floor(this.aiProgressSmooth * 100);
+      const txt = isReady ? '>> UPGRADE READY!' : `UPGRADE: ${pct}%`;
+      ctx.fillText(txt, barX, progressBarY + 18);
+
+      if (this.aiCooldownFrames > 0) {
+        ctx.fillStyle = '#666';
+        ctx.fillText('COOLDOWN', barX + 100, progressBarY + 18);
       }
     }
+
+    ctx.textAlign = 'left';
   }
 
   gameOver() {
@@ -722,8 +896,86 @@ class CpuGame {
     const finalScore = document.getElementById('final-cpu-score');
     if (finalScore) finalScore.innerText = this.score;
 
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('keyup', this.handleKeyUp);
+    // NO removemos los listeners para poder detectar reinicio
+    // Iniciamos el loop de game over para detectar input de reinicio
+    this.gameOverLoop();
+  }
+
+  restartGame() {
+    // Ocultar mensaje de game over
+    const over = document.getElementById('cpu-game-over');
+    if (over) over.style.display = 'none';
+
+    // Reiniciar estado del juego
+    this.state = 'playing';
+    this.score = 0;
+    this.frameCount = 0;
+
+    // Reiniciar entidades
+    this.cpu = new window.CpuBase(this.width / 2, this.height - 60);
+    this.player = new window.PlayerTank(this.width / 2, this.height - 150);
+
+    // Limpiar arrays
+    this.bullets = [];
+    this.enemyBullets = [];
+    this.enemies = [];
+    this.tanks = [];
+    this.particles = [];
+    this.ammoBoxes = [];
+
+    // Reiniciar munición
+    this.maxAmmo = 50;
+    this.ammo = this.maxAmmo;
+    this.lowAmmoWarned = false;
+    this.ammoBoxSpawnTimer = 0;
+
+    // Reiniciar IA si estaba activa
+    if (this.mlModeActive) {
+      this.currentLevel = 1;
+      this.enemySpawnRate = 90;
+      this.resetAiFilterState();
+    } else {
+      this.currentLevel = 1;
+      this.enemySpawnRate = 120;
+    }
+
+    // Reiniciar controles de gamepad
+    this.gamepadRepairLocked = false;
+    this.gamepadAiToggleLocked = false;
+    this.gamepadRestartLocked = false;
+
+    // Actualizar score UI
+    updateScore(this.score);
+
+    // Reiniciar el loop principal
+    this.loop();
+  }
+
+  gameOverLoop() {
+    if (this.state !== 'gameover') return;
+
+    // Detectar input de gamepad para reiniciar
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = gamepads[0];
+
+    if (gp) {
+      const selectPressed = gp.buttons[8]?.pressed || false; // SELECT
+      const startPressed = gp.buttons[9]?.pressed || false;  // START
+      const aPressed = gp.buttons[1]?.pressed || false;      // A
+
+      if ((selectPressed || startPressed || aPressed) && !this.gamepadRestartLocked) {
+        this.gamepadRestartLocked = true;
+        this.restartGame();
+        return;
+      }
+
+      if (!selectPressed && !startPressed && !aPressed) {
+        this.gamepadRestartLocked = false;
+      }
+    }
+
+    // Continuar el loop de game over
+    requestAnimationFrame(() => this.gameOverLoop());
   }
 
   destroy() {

@@ -1,10 +1,8 @@
 /* ==================================================
-   SNAKE RETRO with AI GUIDE MODE
-   Con soporte para ARCADE/GAMEPAD
-   - Palanca: mover serpiente
-   - Pantalla de Game Over
-   - Reinicio con SELECT/START o ENTER
-   - AI MODE: Guía visual del mejor camino
+   SNAKE RETRO CON MODO IA
+   - MODO IA OFF: Velocidad fija (juego clásico)
+   - MODO IA ON: Velocidad se adapta según tu rendimiento
+   - Toggle con mouse o tecla L (arcade)
    ================================================== */
 
 function startSnake() {
@@ -20,7 +18,7 @@ function startSnake() {
     A: 1,
     B: 2,
     Y: 3,
-    L: 4,
+    L: 4,      // Toggle IA
     R: 5,
     SELECT: 8,
     START: 9
@@ -34,15 +32,109 @@ function startSnake() {
   let highScore = parseInt(localStorage.getItem('snakeHighScore')) || 0;
   let running = true;
   let gameOver = false;
-  let gameSpeed = 100;
+  
+  // === SISTEMA DE IA ===
+  let iaMode = false;  // false = velocidad fija, true = velocidad adaptativa
+  const FIXED_SPEED = 100; // Velocidad fija cuando IA está OFF
+  let gameSpeed = FIXED_SPEED;
+  let adaptiveSpeed = 100; // Velocidad cuando IA está ON (se adapta)
+  
+  // Variables para IA adaptativa
+  let deathCount = 0;
+  let foodEatenStreak = 0;
+  let lastDeathLength = 0;
 
-  // AI MODE variables
-  let aiModeEnabled = false;
-  let aiPath = [];
-
-  // Estado previo del gamepad para detectar cambios
+  // Estado previo del gamepad
   let prevGamepadDir = { x: 0, y: 0 };
-  let prevGamepadButtons = {};
+  let prevLPressed = false;
+
+  // Sincronizar con el toggle del HTML usando sistema centralizado
+  const mlToggle = document.getElementById('mlToggle');
+
+  // Callback que será llamado por toggleMLMode en main.js
+  function handleIAToggle(isEnabled) {
+    if (isEnabled !== iaMode) {
+      iaMode = isEnabled;
+      applySpeedMode();
+      showIANotification(iaMode);
+    }
+  }
+
+  function setupToggle() {
+    // Registrar callback en el sistema centralizado
+    window.registerIACallback(handleIAToggle);
+    if (mlToggle) {
+      mlToggle.checked = iaMode;
+    }
+  }
+
+  function toggleIAMode() {
+    iaMode = !iaMode;
+    if (mlToggle) mlToggle.checked = iaMode;
+    applySpeedMode();
+    showIANotification(iaMode);
+  }
+
+  function applySpeedMode() {
+    if (!iaMode) {
+      // Modo normal: velocidad fija
+      gameSpeed = FIXED_SPEED;
+    } else {
+      // Modo IA: usar velocidad adaptativa
+      gameSpeed = adaptiveSpeed;
+    }
+
+    // Reiniciar el loop con la nueva velocidad
+    clearInterval(window.gameInterval);
+    if (!gameOver) {
+      startGameLoop();
+    }
+  }
+
+  function showIANotification(enabled) {
+    // Remover notificaciones previas
+    const gameArea = document.getElementById('game-area');
+    if (!gameArea) return;
+
+    const oldNotifications = gameArea.querySelectorAll('.ia-notification');
+    oldNotifications.forEach(n => n.remove());
+
+    const notification = document.createElement('div');
+    notification.className = 'ia-notification';
+    notification.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: ${enabled ? 'rgba(0, 255, 65, 0.9)' : 'rgba(255, 122, 0, 0.9)'};
+      color: #000;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
+      text-align: center;
+    `;
+    notification.innerHTML = enabled
+      ? 'IA ADAPTATIVA ON<br><small style="font-size:8px">Velocidad se ajusta a tu nivel</small>'
+      : 'MODO CLÁSICO<br><small style="font-size:8px">Velocidad fija</small>';
+
+    gameArea.appendChild(notification);
+
+    // Fade out manual
+    setTimeout(() => {
+      notification.style.opacity = '0';
+    }, 1000);
+
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 1500);
+  }
 
   function initSnake() {
     snake = [
@@ -64,15 +156,41 @@ function startSnake() {
   }
 
   function restartGame() {
+    // Guardar datos para IA antes de reiniciar
+    if (iaMode && snake.length > 0) {
+      lastDeathLength = snake.length;
+      deathCount++;
+      
+      // Adaptar velocidad según rendimiento
+      if (lastDeathLength < 5) {
+        // Murió muy rápido - hacer más lento
+        adaptiveSpeed = Math.min(150, adaptiveSpeed + 15);
+      } else if (lastDeathLength < 10) {
+        // Murió pronto - hacer un poco más lento
+        adaptiveSpeed = Math.min(130, adaptiveSpeed + 8);
+      } else if (lastDeathLength > 20) {
+        // Lo hizo bien - puede ir más rápido
+        adaptiveSpeed = Math.max(60, adaptiveSpeed - 5);
+      }
+    }
+    
     initSnake();
     dir = { x: 1, y: 0 };
     nextDir = { x: 1, y: 0 };
     food = spawnFood();
     score = 0;
-    gameSpeed = 100;
+    foodEatenStreak = 0;
     running = true;
     gameOver = false;
-    aiPath = [];
+
+    
+    // Aplicar velocidad según modo
+    if (iaMode) {
+      gameSpeed = adaptiveSpeed;
+    } else {
+      gameSpeed = FIXED_SPEED;
+    }
+    
     updateScore(score);
     
     clearInterval(window.gameInterval);
@@ -314,6 +432,12 @@ function startSnake() {
 
   // Controles de teclado
   const handleKeyDown = (e) => {
+    // Toggle IA con tecla L
+    if ((e.key === 'l' || e.key === 'L') && !gameOver) {
+      toggleIAMode();
+      return;
+    }
+    
     if (gameOver && (e.key === 'Enter' || e.key === ' ')) {
       restartGame();
       return;
@@ -371,6 +495,13 @@ function startSnake() {
     const gp = gamepads[0];
     if (!gp) return;
 
+    // Toggle IA con L
+    const lPressed = gp.buttons[ARCADE_BUTTONS.L]?.pressed || false;
+    if (lPressed && !prevLPressed && !gameOver) {
+      toggleIAMode();
+    }
+    prevLPressed = lPressed;
+
     // Reiniciar con SELECT o START
     if (gameOver) {
       if (gp.buttons[ARCADE_BUTTONS.SELECT]?.pressed || 
@@ -399,28 +530,21 @@ function startSnake() {
     const axisX = gp.axes[0];
     const axisY = gp.axes[1];
     
-    // Detectar dirección del joystick
     let gpDir = { x: 0, y: 0 };
     
-    if (axisX < -0.5) gpDir.x = -1;      // Izquierda
-    else if (axisX > 0.5) gpDir.x = 1;   // Derecha
+    if (axisX < -0.5) gpDir.x = -1;
+    else if (axisX > 0.5) gpDir.x = 1;
     
-    if (axisY < -0.5) gpDir.y = -1;      // Arriba
-    else if (axisY > 0.5) gpDir.y = 1;   // Abajo
+    if (axisY < -0.5) gpDir.y = -1;
+    else if (axisY > 0.5) gpDir.y = 1;
 
-    // Solo cambiar dirección si el joystick ACABA de moverse
-    // (para evitar cambios múltiples en un solo movimiento)
-    
-    // Priorizar movimiento vertical u horizontal según cuál sea más fuerte
     if (Math.abs(axisY) > Math.abs(axisX)) {
-      // Movimiento vertical
       if (gpDir.y === -1 && prevGamepadDir.y !== -1 && dir.y !== 1) {
         nextDir = { x: 0, y: -1 };
       } else if (gpDir.y === 1 && prevGamepadDir.y !== 1 && dir.y !== -1) {
         nextDir = { x: 0, y: 1 };
       }
     } else {
-      // Movimiento horizontal
       if (gpDir.x === -1 && prevGamepadDir.x !== -1 && dir.x !== 1) {
         nextDir = { x: -1, y: 0 };
       } else if (gpDir.x === 1 && prevGamepadDir.x !== 1 && dir.x !== -1) {
@@ -439,29 +563,40 @@ function startSnake() {
 
     ctx.fillStyle = '#ff4444';
     ctx.font = 'bold 42px "Press Start 2P", monospace';
-    ctx.fillText('GAME OVER', 300, 120);
+    ctx.fillText('GAME OVER', 300, 100);
 
     ctx.fillStyle = '#ffb000';
     ctx.font = '20px "Press Start 2P", monospace';
-    ctx.fillText(`PUNTOS: ${score}`, 300, 180);
+    ctx.fillText(`PUNTOS: ${score}`, 300, 160);
 
     ctx.fillStyle = '#00ff41';
     ctx.font = '14px "Press Start 2P", monospace';
     if (score >= highScore && score > 0) {
-      ctx.fillText('¡NUEVO RÉCORD!', 300, 220);
+      ctx.fillText('¡NUEVO RÉCORD!', 300, 200);
     } else {
-      ctx.fillText(`RÉCORD: ${highScore}`, 300, 220);
+      ctx.fillText(`RÉCORD: ${highScore}`, 300, 200);
+    }
+
+    // Mostrar modo e info de IA
+    ctx.fillStyle = iaMode ? '#00ff41' : '#ff7a00';
+    ctx.font = '10px "Press Start 2P", monospace';
+    ctx.fillText(iaMode ? 'MODO: IA ADAPTATIVA' : 'MODO: CLÁSICO', 300, 240);
+    
+    if (iaMode) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.fillText(`VELOCIDAD AJUSTADA: ${getSpeedLabel(adaptiveSpeed)}`, 300, 260);
     }
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.font = '10px "Press Start 2P", monospace';
-    ctx.fillText(`LONGITUD: ${snake.length}`, 300, 260);
+    ctx.fillText(`LONGITUD: ${snake.length}`, 300, 290);
 
     if (Math.floor(Date.now() / 500) % 2 === 0) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.font = '10px "Press Start 2P", monospace';
-      ctx.fillText('SELECT/ENTER PARA REINICIAR', 300, 320);
-      ctx.fillText('X PARA SALIR', 300, 345);
+      ctx.fillText('SELECT/ENTER PARA REINICIAR', 300, 340);
+      ctx.fillText('X PARA SALIR', 300, 365);
     }
 
     ctx.textAlign = 'left';
@@ -492,8 +627,9 @@ function startSnake() {
       const intensity = 1 - (index / snake.length) * 0.5;
       
       if (isHead) {
-        ctx.fillStyle = '#00ff41';
-        ctx.shadowColor = '#00ff41';
+        // Cabeza cambia de color si IA está activa
+        ctx.fillStyle = iaMode ? '#ff00ff' : '#00ff41';
+        ctx.shadowColor = iaMode ? '#ff00ff' : '#00ff41';
         ctx.shadowBlur = 10;
       } else {
         const r = Math.floor(255 * intensity);
@@ -564,11 +700,35 @@ function startSnake() {
     ctx.textAlign = 'left';
     ctx.fillText(`PUNTOS: ${score}`, 10, 25);
 
+    // Indicador de modo IA
+    if (iaMode) {
+      ctx.fillStyle = '#00ff41';
+      ctx.fillText(`🤖 IA: ${getSpeedLabel(gameSpeed)}`, 10, 45);
+    } else {
+      ctx.fillStyle = '#ff7a00';
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillText('CLÁSICO', 10, 45);
+    }
+
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(0, 255, 65, 0.6)';
+    ctx.font = '12px "Press Start 2P", monospace';
     ctx.fillText(`RÉCORD: ${highScore}`, 590, 25);
     
+    // Hint para IA
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '8px monospace';
+    ctx.fillText('L = Toggle IA', 590, 45);
+    
     ctx.textAlign = 'left';
+  }
+
+  function getSpeedLabel(speed) {
+    if (speed >= 140) return 'MUY LENTO';
+    if (speed >= 120) return 'LENTO';
+    if (speed >= 90) return 'NORMAL';
+    if (speed >= 70) return 'RÁPIDO';
+    return 'MUY RÁPIDO';
   }
 
   function gameLoop() {
@@ -608,13 +768,18 @@ function startSnake() {
 
     if (head.x === food.x && head.y === food.y) {
       score += 10;
+      foodEatenStreak++;
       updateScore(score);
       food = spawnFood();
 
-      if (score % 50 === 0 && gameSpeed > 50) {
-        gameSpeed -= 5;
-        clearInterval(window.gameInterval);
-        startGameLoop();
+      // En modo IA, aumentar velocidad gradualmente al comer
+      if (iaMode) {
+        if (foodEatenStreak >= 5 && adaptiveSpeed > 60) {
+          adaptiveSpeed -= 3;
+          gameSpeed = adaptiveSpeed;
+          clearInterval(window.gameInterval);
+          startGameLoop();
+        }
       }
       
       // Update AI path when food is eaten
@@ -645,6 +810,7 @@ function startSnake() {
   initSnake();
   food = spawnFood();
   updateScore(score);
+  setupToggle();
   startGameLoop();
 
   // Limpiar al cerrar
@@ -669,6 +835,7 @@ function startSnake() {
     aiModeEnabled = false;
     aiPath = [];
     
+    // El callback de IA se limpia automáticamente en closeMinigame de main.js
     if (originalClose) originalClose();
   };
 }

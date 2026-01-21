@@ -26,6 +26,55 @@ window.gameInterval = null;
 window.activeCpuGameInstance = null;
 
 /* ==================================================
+   FULLSCREEN SUPPORT - AUTOMÁTICO
+   ================================================== */
+function enterFullscreen() {
+  const overlay = document.getElementById('game-overlay');
+  if (!overlay) return;
+
+  // Agregar clase fullscreen
+  overlay.classList.add('fullscreen-mode');
+
+  // Intentar fullscreen nativo del navegador
+  if (overlay.requestFullscreen) {
+    overlay.requestFullscreen().catch(() => {});
+  } else if (overlay.webkitRequestFullscreen) {
+    overlay.webkitRequestFullscreen();
+  } else if (overlay.msRequestFullscreen) {
+    overlay.msRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+  const overlay = document.getElementById('game-overlay');
+  if (overlay) {
+    overlay.classList.remove('fullscreen-mode');
+  }
+
+  if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+  }
+}
+
+// Escuchar cambios de fullscreen del navegador
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+function handleFullscreenChange() {
+  const overlay = document.getElementById('game-overlay');
+  const isNativeFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+
+  if (!isNativeFullscreen && overlay) {
+    overlay.classList.remove('fullscreen-mode');
+  }
+}
+
+/* ==================================================
    GAMEPAD / ARCADE SUPPORT
    ================================================== */
 window.gamepadState = {
@@ -183,12 +232,12 @@ function gamepadLoop() {
       if (isAxisJustMoved('right')) {
         nextBtn.click();
       }
-      
-      // SELECT o START para jugar
-      if (isButtonJustPressed(ARCADE_BUTTONS.SELECT) || isButtonJustPressed(ARCADE_BUTTONS.START)) {
+
+      // Solo SELECT para jugar (no START)
+      if (isButtonJustPressed(ARCADE_BUTTONS.SELECT)) {
         playBtn.click();
       }
-      
+
       // Y para abrir menú de ayuda
       if (isButtonJustPressed(ARCADE_BUTTONS.Y)) {
         setSettingsMenuOpen(!isSettingsMenuOpen());
@@ -219,18 +268,52 @@ function getGameIntroLabel(type) {
   return 'CPU DEFENDER';
 }
 
-function ensureGameAreaUI(gameArea) {
+function getGameControls(type) {
+  if (type === 'pong') {
+    return `
+      <div class="game-controls">
+        <div class="control-item">PALANCA / MOUSE: Mover paleta</div>
+        <div class="control-item">W/S: Mover paleta</div>
+        <div class="control-item">L: Activar/Desactivar IA</div>
+        <div class="control-item">META: 5 puntos</div>
+      </div>
+    `;
+  } else if (type === 'snake') {
+    return `
+      <div class="game-controls">
+        <div class="control-item">PALANCA: Dirección</div>
+        <div class="control-item">WASD: Dirección</div>
+        <div class="control-item">L: Activar/Desactivar IA</div>
+        <div class="control-item">OBJETIVO: Máxima puntuación</div>
+      </div>
+    `;
+  } else {
+    return `
+      <div class="game-controls">
+        <div class="control-item">PALANCA: Mover y esquivar</div>
+        <div class="control-item">A: Disparar</div>
+        <div class="control-item">B: Curar (si hay kit)</div>
+        <div class="control-item">SOBREVIVE el mayor tiempo posible</div>
+      </div>
+    `;
+  }
+}
+
+function ensureGameAreaUI(gameArea, gameType) {
   if (!gameArea) return;
 
   gameArea.innerHTML = `
     <div id="game-intro" class="game-intro" aria-hidden="true">
       <div class="game-intro-decor left"></div>
       <div class="game-intro-decor right"></div>
-      
+
       <div class="game-intro-inner">
         <div class="game-intro-kicker">PREPÁRATE</div>
         <h1 id="game-intro-title" class="game-intro-title">JUEGO</h1>
-        <div class="game-intro-sub">INICIANDO...</div>
+        <div id="game-intro-controls" class="game-intro-controls"></div>
+        <div class="game-intro-sub">
+          <span class="blink-text">PRESIONA START PARA JUGAR</span>
+        </div>
       </div>
     </div>
 
@@ -256,27 +339,78 @@ async function showGameIntro(type) {
 
   const intro = document.getElementById('game-intro');
   const introTitle = document.getElementById('game-intro-title');
+  const introControls = document.getElementById('game-intro-controls');
 
   if (!intro || !introTitle) return;
 
   introTitle.textContent = getGameIntroLabel(type);
 
+  // Agregar controles del juego
+  if (introControls) {
+    introControls.innerHTML = getGameControls(type);
+  }
+
   intro.classList.add('active');
   intro.setAttribute('aria-hidden', 'false');
 
-  await sleep(1400);
+  // Esperar a que el usuario presione START para continuar
+  return new Promise((resolve) => {
+    let resolved = false;
+    let buttonWasReleased = false; // Para evitar detectar el mismo press del menú
 
-  intro.style.opacity = '0';
-  intro.style.transform = 'scale(1.1)';
-  intro.style.transition = 'opacity 300ms ease, transform 300ms ease';
-  
-  await sleep(300);
+    const checkGamepad = () => {
+      if (resolved) return;
 
-  intro.classList.remove('active');
-  intro.setAttribute('aria-hidden', 'true');
-  intro.style.opacity = '';
-  intro.style.transform = '';
-  intro.style.transition = '';
+      const gamepads = navigator.getGamepads();
+      const gp = gamepads[0];
+
+      if (gp) {
+        const startPressed = gp.buttons[ARCADE_BUTTONS.START]?.pressed || false;
+
+        // Esperar a que se suelte el botón primero
+        if (!startPressed && !buttonWasReleased) {
+          buttonWasReleased = true;
+        }
+
+        // Solo detectar nueva presión después de que se haya soltado
+        if (startPressed && buttonWasReleased) {
+          resolved = true;
+          hideIntro();
+          resolve();
+          return;
+        }
+      }
+
+      requestAnimationFrame(checkGamepad);
+    };
+
+    const handleKeyPress = (e) => {
+      if (resolved) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        resolved = true;
+        document.removeEventListener('keydown', handleKeyPress);
+        hideIntro();
+        resolve();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    requestAnimationFrame(checkGamepad);
+
+    async function hideIntro() {
+      intro.style.opacity = '0';
+      intro.style.transform = 'scale(1.1)';
+      intro.style.transition = 'opacity 300ms ease, transform 300ms ease';
+
+      await sleep(300);
+
+      intro.classList.remove('active');
+      intro.setAttribute('aria-hidden', 'true');
+      intro.style.opacity = '';
+      intro.style.transform = '';
+      intro.style.transition = '';
+    }
+  });
 }
 
 function withAudio(fn) {
@@ -321,15 +455,39 @@ prevBtn.onclick = () => {
 };
 
 // ---- Toggle ML CPU ----
+// Sistema centralizado para manejar el toggle de IA
+// Cada juego registra su callback y lo limpia al cerrar
+window.currentGameIACallback = null;
+
 window.toggleMLMode = function () {
-  if (window.activeCpuGameInstance) {
+  const mlToggle = document.getElementById('mlToggle');
+  const isChecked = mlToggle ? mlToggle.checked : false;
+
+  // Si hay un callback de juego registrado, llamarlo
+  if (typeof window.currentGameIACallback === 'function') {
+    window.currentGameIACallback(isChecked);
+    return;
+  }
+
+  // Fallback para CPU Defender (usa sistema diferente)
+  if (window.activeCpuGameInstance && typeof window.activeCpuGameInstance.setMLMode === 'function') {
     setTimeout(() => {
-      window.activeCpuGameInstance.setMLMode(document.getElementById('mlToggle').checked);
+      window.activeCpuGameInstance.setMLMode(isChecked);
     }, 50);
   }
 };
 
-// ---- Abrir Minijuego ----
+// Función para que los juegos registren su callback de IA
+window.registerIACallback = function(callback) {
+  window.currentGameIACallback = callback;
+};
+
+// Función para limpiar el callback al cerrar el juego
+window.unregisterIACallback = function() {
+  window.currentGameIACallback = null;
+};
+
+// ---- Abrir Minijuego (solo abre overlay y muestra intro) ----
 window.playMinigame = async function (type) {
   const overlay = document.getElementById('game-overlay');
   const gameArea = document.getElementById('game-area');
@@ -345,27 +503,38 @@ window.playMinigame = async function (type) {
   }
   document.getElementById('mlToggle').checked = false;
 
-  ensureGameAreaUI(gameArea);
+  ensureGameAreaUI(gameArea, type);
 
   overlay.classList.add('active');
   if (title) title.innerText = type.toUpperCase();
 
-  // Música del juego (crossfade desde lobby)
-  withAudio((am) => am.playGameTrack(type));
+  // Activar fullscreen automáticamente
+  enterFullscreen();
 
-  // UI: mostrar intro ANTES de iniciar el juego
+  // Ocultar botón de IA durante la intro
+  const mlContainer = document.querySelector('.ml-switch-container');
+  if (mlContainer) mlContainer.style.display = 'none';
+
+  // UI: mostrar intro y ESPERAR a que el usuario presione SELECT
   await showGameIntro(type);
 
   // Si se cerró o se inició otro juego durante la intro, aborta
   if (window.__gameRunToken !== runToken) return;
   if (!overlay.classList.contains('active')) return;
 
+  // Ahora SÍ iniciar la música del juego (después de SELECT en intro)
+  withAudio((am) => am.playGameTrack(type));
+
+  // Mostrar botón de IA solo para pong y snake (no para CPU)
+  if (type === 'pong' || type === 'snake') {
+    if (mlContainer) mlContainer.style.display = 'flex';
+  }
+
   // Inicia la lógica del juego
   if (type === 'cpu') {
-    document.querySelector('.ml-switch-container').style.display = 'flex';
+    if (mlContainer) mlContainer.style.display = 'flex';
     startCpuDefender();
   } else {
-    document.querySelector('.ml-switch-container').style.display = 'none';
     if (type === 'snake') startSnake();
     if (type === 'pong') startPong();
   }
@@ -385,8 +554,19 @@ window.closeMinigame = function () {
     window.activeCpuGameInstance = null;
   }
 
+  // Limpiar callback de IA del juego
+  window.unregisterIACallback();
+
+  // Salir de fullscreen
+  exitFullscreen();
+
+  const overlay = document.getElementById('game-overlay');
   document.getElementById('game-area').innerHTML = '';
-  document.getElementById('game-overlay').classList.remove('active');
+  overlay.classList.remove('active');
+
+  // Resetear el toggle de IA
+  const mlToggle = document.getElementById('mlToggle');
+  if (mlToggle) mlToggle.checked = false;
 
   // Vuelve al lobby
   withAudio((am) => am.returnToLobby());
@@ -397,12 +577,22 @@ playBtn.addEventListener('click', () => {
   const cards = getActiveCards();
   const name = cards[currentIndex].querySelector('h3').innerText.toLowerCase();
 
-  if (currentListId === 'list-pro') return alert("¡BLOQUEADO!");
+  // 👉 ARCADE PRO
+  if (currentListId === 'list-pro') {
+    if (name.includes('feed the monster')) {
+      window.open('http://localhost:3000', '_blank');
+    } else {
+      alert("Juego Arcade Pro no disponible aún");
+    }
+    return;
+  }
 
+  // 👉 MINIJUEGOS
   if (name.includes('pong')) window.playMinigame('pong');
   else if (name.includes('snake')) window.playMinigame('snake');
   else if (name.includes('cpu')) window.playMinigame('cpu');
 });
+
 
 // ==================================================
 //  Menú ⚙
@@ -411,6 +601,15 @@ function setSettingsMenuOpen(open) {
   if (!settingsMenu) return;
   settingsMenu.classList.toggle('open', open);
   settingsMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+  
+  // Ocultar/mostrar el aviso flotante arcade (solo si gamepad está conectado)
+  if (arcadeHint && window.gamepadState.connected) {
+    if (open) {
+      arcadeHint.classList.remove('visible');
+    } else {
+      arcadeHint.classList.add('visible');
+    }
+  }
 }
 
 function isSettingsMenuOpen() {
@@ -473,15 +672,49 @@ function skipSplashAndStart() {
 async function startAudioNow() {
   if (audioStarted) return;
   audioStarted = true;
-  
+
   const am = window.audioManager;
   if (!am) return;
-  
+
   const unlocked = await am.unlockAndPrime();
   if (unlocked) {
     am.startLobbyNow();
+  } else {
+    // Si falló, permitir reintento en próxima interacción
+    audioStarted = false;
   }
 }
+
+// Función para reintentar el audio en cualquier interacción
+function retryAudioIfNeeded(e) {
+  const am = window.audioManager;
+  if (!am || am.isMuted) return;
+
+  // Ignorar clicks en controles del juego para evitar interferencias
+  if (e && e.target) {
+    const target = e.target;
+    if (target.id === 'mlToggle' ||
+        target.closest('.ml-switch-container') ||
+        target.closest('#game-area') ||
+        target.tagName === 'CANVAS') {
+      return;
+    }
+  }
+
+  // Si el splash ya pasó pero el audio no está funcionando
+  if (splashSkipped && !am.unlocked) {
+    am.forceStart();
+  } else if (splashSkipped && am.unlocked) {
+    // Verificar si el audio está pausado cuando no debería
+    const active = am._active();
+    if (active && active.paused && am.activeType) {
+      am._ensureLobbyPlaying();
+    }
+  }
+}
+
+// Escuchar clicks en el documento para reintentar audio si es necesario
+document.addEventListener('click', retryAudioIfNeeded, { once: false });
 
 // Escuchar ESPACIO en teclado para splash
 document.addEventListener('keydown', (e) => {
@@ -515,15 +748,17 @@ if (muteBtn) {
     const am = window.audioManager;
     if (!am) return;
 
-    if (!am.unlocked && am.isMuted) {
+    if (!am.unlocked || am.isMuted) {
+      // Si está muteado o no desbloqueado, forzar inicio
       am.isMuted = false;
       localStorage.setItem("muted", "false");
-      await am.unlockAndPrime();
-      am.startLobbyNow();
+      am._applyMuteTo(am.A);
+      am._applyMuteTo(am.B);
+      await am.forceStart();
     } else {
       am.toggleMute();
     }
-    
+
     updateMuteButton();
     setSettingsMenuOpen(false);
   });

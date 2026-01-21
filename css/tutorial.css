@@ -65,7 +65,7 @@
 
 .tutorial-header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.4rem;
   color: #00ff41;
   text-shadow: 0 0 10px #00ff41;
 }
@@ -104,12 +104,12 @@
 
 .control-column h3 {
   margin-top: 0;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: #ffcc00;
 }
 
 .subtitle {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   color: #aaa;
   margin-top: -6px;
 }
@@ -124,7 +124,7 @@
 
 .game-guide h4 {
   margin: 0 0 10px 0;
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   color: #fff;
   display: flex;
   align-items: center;
@@ -139,19 +139,20 @@
 }
 
 .game-guide p {
-  margin: 6px 0;
-  font-size: 0.65rem;
-  color: #ccc;
-  line-height: 1.5;
+  margin: 8px 0;
+  font-size: 1rem;
+  color: #ddd;
+  line-height: 1.7;
 }
 
 .key-highlight {
   display: inline-block;
-  padding: 4px 6px;
+  padding: 5px 8px;
   border-radius: 6px;
   background: #000;
   border: 1px solid #444;
   color: #00ff41;
+  font-size: 0.8rem;
 }
 
 /* Joystick visual */
@@ -184,7 +185,7 @@
   background: #222;
   border: 2px solid #00ff41;
   color: #00ff41;
-  font-size: 0.65rem;
+  font-size: 0.8rem;
 }
 
 .buttons-part .btn-top,
@@ -215,7 +216,7 @@
 .label-func {
   display: block;
   margin-top: 8px;
-  font-size: 0.6rem;
+  font-size: 0.9rem;
   color: #aaa;
 }
 
@@ -233,9 +234,9 @@
 }
 
 .arcade-legend li {
-  font-size: 0.65rem;
+  font-size: 0.95rem;
   color: #ddd;
-  line-height: 1.6;
+  line-height: 1.8;
 }
 
 .fade-in {
