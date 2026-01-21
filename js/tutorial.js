@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let prevButtonState = {};
 
+  // Configuración del scroll con palanca
+  const SCROLL_SPEED = 15; // Pixeles por frame
+  const AXIS_DEADZONE = 0.3; // Zona muerta para evitar scroll accidental
+
   function isButtonJustPressed(gp, buttonIndex) {
     const isPressed = gp.buttons[buttonIndex]?.pressed || false;
     const wasPressed = prevButtonState[buttonIndex] || false;
@@ -86,20 +90,32 @@ document.addEventListener('DOMContentLoaded', () => {
   function tutorialGamepadLoop() {
     const gamepads = navigator.getGamepads();
     const gp = gamepads[0];
-    
+
     if (gp) {
       const isOpen = tutorialOverlay.style.display === 'flex' || tutorialOverlay.classList.contains('active');
-      
+
       if (isOpen) {
         // X o B para cerrar
         if (isButtonJustPressed(gp, ARCADE_BUTTONS.X) || isButtonJustPressed(gp, ARCADE_BUTTONS.B)) {
           hideOverlay();
         }
+
+        // Scroll con la palanca (eje Y)
+        const tutorialContent = tutorialOverlay.querySelector('.tutorial-content');
+        if (tutorialContent) {
+          const axisY = gp.axes[1] || 0; // Eje vertical de la palanca
+
+          // Aplicar scroll si está fuera de la zona muerta
+          if (Math.abs(axisY) > AXIS_DEADZONE) {
+            const scrollAmount = axisY * SCROLL_SPEED;
+            tutorialContent.scrollTop += scrollAmount;
+          }
+        }
       }
-      
+
       updatePrevState(gp);
     }
-    
+
     requestAnimationFrame(tutorialGamepadLoop);
   }
 

@@ -599,6 +599,111 @@ if (openHelpBtn) {
   });
 }
 
+// ---- Mapeo de teclado (equivalente a los botones del arcade) ----
+// X=0 -> Escape/X, A=1 -> A, B=2 -> B/S, Y=3 -> Y/H, L=4 -> L, R=5 -> R, SELECT=8 -> Enter, START=9 -> Space/Enter
+document.addEventListener('keydown', (e) => {
+  const loader = document.getElementById('retro-loader');
+  const gameOverlay = document.getElementById('game-overlay');
+  const tutorialOverlay = document.getElementById('tutorial-overlay');
+
+  const isInGame = gameOverlay && gameOverlay.classList.contains('active');
+  const isInSplash = loader && loader.style.opacity !== '0';
+  const isTutorialOpen = tutorialOverlay && (tutorialOverlay.classList.contains('active') || tutorialOverlay.style.display === 'flex');
+  const isMenuOpen = isSettingsMenuOpen();
+
+  // Evitar conflictos con inputs de texto
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  const key = e.key.toLowerCase();
+
+  // SPLASH - START (Space/Enter ya manejado en otro listener)
+  if (isInSplash) {
+    return; // Ya se maneja con el listener existente
+  }
+
+  // TUTORIAL abierto
+  if (isTutorialOpen) {
+    // X o B para cerrar (Escape, X, B, S)
+    if (key === 'escape' || key === 'x' || key === 'b' || key === 's') {
+      e.preventDefault();
+      window.closeTutorial();
+    }
+    return;
+  }
+
+  // MENÚ de configuración abierto
+  if (isMenuOpen) {
+    // R - Abrir tutorial
+    if (key === 'r') {
+      e.preventDefault();
+      setSettingsMenuOpen(false);
+      window.openTutorial();
+    }
+    // B/S - Mutear/Desmutear
+    if (key === 'b' || key === 's') {
+      e.preventDefault();
+      muteBtn?.click();
+    }
+    // X o Y para cerrar menú (Escape, X, Y, H)
+    if (key === 'escape' || key === 'x' || key === 'y' || key === 'h') {
+      e.preventDefault();
+      setSettingsMenuOpen(false);
+    }
+    return;
+  }
+
+  // EN JUEGO
+  if (isInGame) {
+    // X - Salir del juego (Escape, X)
+    if (key === 'escape' || key === 'x') {
+      e.preventDefault();
+      window.closeMinigame();
+    }
+    // Y - Abrir tutorial (Y, H)
+    if (key === 'y' || key === 'h') {
+      e.preventDefault();
+      window.openTutorial();
+    }
+    return;
+  }
+
+  // MENÚ PRINCIPAL
+  // Flechas para navegar entre juegos
+  if (key === 'arrowleft') {
+    e.preventDefault();
+    prevBtn.click();
+  }
+  if (key === 'arrowright') {
+    e.preventDefault();
+    nextBtn.click();
+  }
+
+  // SELECT para jugar (Enter)
+  if (key === 'enter') {
+    e.preventDefault();
+    playBtn.click();
+  }
+
+  // Y - Menú de ayuda (Y, H)
+  if (key === 'y' || key === 'h') {
+    e.preventDefault();
+    setSettingsMenuOpen(!isSettingsMenuOpen());
+  }
+
+  // A - Cambiar entre Minijuegos y Arcade Pro
+  if (key === 'a') {
+    e.preventDefault();
+    const catButtons = document.querySelectorAll('.cat-btn');
+    if (catButtons.length >= 2) {
+      if (currentListId === 'list-minigames') {
+        window.switchCategory('pro', catButtons[1]);
+      } else {
+        window.switchCategory('minigames', catButtons[0]);
+      }
+    }
+  }
+});
+
 //Audio solo cuando se presiona Start - Splash
 let audioStarted = false;
 let splashSkipped = false;
