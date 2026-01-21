@@ -9,6 +9,7 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsMenu = document.getElementById('settingsMenu');
 const openHelpBtn = document.getElementById('openHelpBtn');
 const arcadeHint = document.getElementById('arcadeHint');
+const categoryHint = document.getElementById('categoryHint');
 
 window.gameInterval = null;
 window.activeCpuGameInstance = null;
@@ -84,6 +85,9 @@ window.addEventListener('gamepadconnected', (e) => {
   if (arcadeHint) {
     arcadeHint.classList.add('visible');
   }
+  if (categoryHint) {
+    categoryHint.classList.add('visible');
+  }
 });
 
 window.addEventListener('gamepaddisconnected', (e) => {
@@ -91,6 +95,9 @@ window.addEventListener('gamepaddisconnected', (e) => {
   window.gamepadState.connected = false;
   if (arcadeHint) {
     arcadeHint.classList.remove('visible');
+  }
+  if (categoryHint) {
+    categoryHint.classList.remove('visible');
   }
 });
 
@@ -552,11 +559,13 @@ function setSettingsMenuOpen(open) {
   if (!settingsMenu) return;
   settingsMenu.classList.toggle('open', open);
   settingsMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
-  if (arcadeHint && window.gamepadState.connected) {
+  if (window.gamepadState.connected) {
     if (open) {
-      arcadeHint.classList.remove('visible');
+      if (arcadeHint) arcadeHint.classList.remove('visible');
+      if (categoryHint) categoryHint.classList.remove('visible');
     } else {
-      arcadeHint.classList.add('visible');
+      if (arcadeHint) arcadeHint.classList.add('visible');
+      if (categoryHint) categoryHint.classList.add('visible');
     }
   }
 }
