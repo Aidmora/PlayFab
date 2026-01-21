@@ -1,8 +1,4 @@
-/* ==================================================
-   CPU DEFENDER - UI helpers
-   (Anuncios + loading overlay)
-   ================================================== */
-
+// Mostrar anuncio de desafío
 function cpuShowAnnouncement(title, subtitle, duration = 2000) {
   const a = document.getElementById('challenge-announcement');
   if (!a) return;
@@ -20,7 +16,7 @@ function cpuShowAnnouncement(title, subtitle, duration = 2000) {
     if (node) node.style.display = 'none';
   }, duration);
 }
-
+// Mostrar/ocultar loading de IA
 function cpuSetLoading(show, text) {
   const l = document.getElementById('ai-loading');
   if (!l) return;

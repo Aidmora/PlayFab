@@ -1,12 +1,3 @@
-/* ==================================================
-   CPU DEFENDER - GAME
-   Depende de:
-   - utils.js: createGameCanvas(), updateScore()
-   - cpuDefender/ai.js: window.CpuDefenderAI
-   - cpuDefender/entities.js: window.PlayerTank, window.CpuBase, etc.
-   - cpuDefender/ui.js: window.cpuShowAnnouncement(), window.cpuSetLoading()
-   ================================================== */
-
 function startCpuDefender() {
   const gameArea = document.getElementById('game-area');
 
@@ -119,21 +110,15 @@ class CpuGame {
     this.ammoBoxSpawnTimer = 0;
 
     // Probabilidades crudas (HUD)
-    this.aiProbabilities = [0.33, 0.33, 0.34]; // EASY, NORMAL, HARD
-
-    // ===== Ruta A: EMA + histéresis + cooldown =====
+    this.aiProbabilities = [0.33, 0.33, 0.34];
     this.aiEma = { easy: 0.33, normal: 0.33, hard: 0.34 };
     this.aiCooldownFrames = 0;
-
-    // UI progreso suave
     this.aiProgressSmooth = 0;
-
-    // alerta ammo bajo
     this.lowAmmoWarned = false;
 
-    // ===== Parámetros Ruta A (AJUSTADO PARA MEJOR PROGRESIÓN) =====
+    // ===== Parámetros =====
     this.AI_EMA_ALPHA = 0.20;
-    this.AI_UP_TH = 0.50;     // ANTES 0.72. Bajado para subir nivel más fácil.
+    this.AI_UP_TH = 0.50;    
     this.AI_DOWN_TH = 0.78;
     this.AI_NORMAL_LOCK = 0.55;
     this.AI_COOLDOWN_SEC = 4;

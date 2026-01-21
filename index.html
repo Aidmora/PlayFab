@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet" />
 
-  <!-- CSS (modular) -->
+  <!-- CSS -->
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/pong.css" />
   <link rel="stylesheet" href="css/snake.css" />
@@ -23,10 +23,7 @@
 </head>
 
 <body>
-
-  <!-- 🎮 SPLASH ÉPICO ARCADE -->
   <div id="retro-loader" aria-hidden="true">
-    <!-- Partículas flotantes -->
     <div class="splash-particles">
       <span></span>
       <span></span>
@@ -44,11 +41,11 @@
       <div class="bar" aria-label="Progreso de carga">
         <div class="progress"></div>
       </div>
-      <div class="insert-coin">PRESS START</div>
+      <div class="insert-coin">PRESS START/ESPACIO</div>
     </div>
   </div>
 
-  <!-- Decoración izquierda -->
+  <!--Búho fablab -->
   <div class="side-decoration left">
     <div class="neon-owl">
       <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -63,7 +60,7 @@
     </div>
   </div>
 
-  <!-- CABINET -->
+  <!-- Arcade -->
   <div class="arcade-cabinet">
     <header>
       <h1>PLAYFAB</h1>
@@ -117,7 +114,7 @@
 
       <button class="btn-side" id="nextBtn" aria-label="Siguiente">▶</button>
 
-      <!-- ⚙️ Botón de ayuda - Engranaje brillante -->
+      <!-- Botón de ayuda-->
       <div class="settings-wrapper">
         <button class="btn-settings" id="settingsBtn" aria-label="Ayuda y opciones" title="Ayuda y opciones">
           <svg class="gear-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -128,13 +125,13 @@
           </svg>
         </button>
 
-        <!-- 🎮 AVISO FLOTANTE ARCADE - Presiona Y -->
+        <!-- AVISO FLOTANTE ARCADE - Presiona Y -->
         <div class="arcade-hint" id="arcadeHint">
           <span class="arcade-hint-key">Y</span>
           <span class="arcade-hint-text">AYUDA</span>
         </div>
 
-        <!-- Menú (Help + Mute adentro) con teclas -->
+        <!-- Menú (Ayuda y Sonido) -->
         <div class="settings-menu" id="settingsMenu" aria-hidden="true">
           <button class="menu-item" id="openHelpBtn" type="button">
             <span class="mi-icon">?</span>
@@ -183,7 +180,6 @@
       <div class="game-area" id="game-area" style="position: relative;">
         <!-- Intro antes de iniciar el juego -->
         <div id="game-intro" class="game-intro" aria-hidden="true">
-          <!-- Decoración lateral -->
           <div class="game-intro-decor left"></div>
           <div class="game-intro-decor right"></div>
 

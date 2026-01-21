@@ -1,8 +1,3 @@
-/* ==================================================
-   CPU DEFENDER - ENTITIES
-   (Físicas ajustadas: Control preciso y frenado rápido)
-   ================================================== */
-
 class CpuBase {
   constructor(x, y) {
     this.x = x;
@@ -16,19 +11,11 @@ class CpuBase {
     const healthPercent = this.health / 100;
     const dangerMode = this.health <= 30;
     const criticalPulse = dangerMode ? Math.sin(this.pulse * 8) * 0.5 + 0.5 : 1;
-
-    // === CPU BASE CYBERPUNK ===
-
-    // Plataforma base
     ctx.fillStyle = '#0a1a2a';
     ctx.fillRect(this.x - 60, this.y + 15, 120, 25);
-
-    // Glow de la base según salud
     const glowColor = dangerMode ? '#ff0066' : '#00ffff';
     ctx.shadowColor = glowColor;
     ctx.shadowBlur = dangerMode ? 20 * criticalPulse : 15;
-
-    // Cuerpo principal del CPU
     const cpuGrad = ctx.createLinearGradient(this.x - 45, this.y - 25, this.x + 45, this.y + 15);
     cpuGrad.addColorStop(0, '#1a3344');
     cpuGrad.addColorStop(0.5, '#2a4455');
@@ -38,12 +25,10 @@ class CpuBase {
 
     ctx.shadowBlur = 0;
 
-    // Borde neón
     ctx.strokeStyle = dangerMode ? `rgba(255, 0, 102, ${criticalPulse})` : '#00ffff';
     ctx.lineWidth = 3;
     ctx.strokeRect(this.x - 45, this.y - 25, 90, 40);
 
-    // Núcleo central brillante
     const coreGrad = ctx.createRadialGradient(this.x, this.y - 5, 0, this.x, this.y - 5, 25);
     if (dangerMode) {
       coreGrad.addColorStop(0, `rgba(255, 0, 102, ${0.8 * criticalPulse})`);
@@ -55,11 +40,9 @@ class CpuBase {
     ctx.fillStyle = coreGrad;
     ctx.fillRect(this.x - 35, this.y - 18, 70, 26);
 
-    // Circuitos decorativos
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
     ctx.lineWidth = 1;
 
-    // Líneas de circuito izquierda
     ctx.beginPath();
     ctx.moveTo(this.x - 40, this.y - 15);
     ctx.lineTo(this.x - 55, this.y - 15);
@@ -68,7 +51,6 @@ class CpuBase {
     ctx.lineTo(this.x - 50, this.y);
     ctx.stroke();
 
-    // Líneas de circuito derecha
     ctx.beginPath();
     ctx.moveTo(this.x + 40, this.y - 15);
     ctx.lineTo(this.x + 55, this.y - 15);
@@ -77,13 +59,11 @@ class CpuBase {
     ctx.lineTo(this.x + 50, this.y);
     ctx.stroke();
 
-    // Texto "CPU" o símbolo
     ctx.fillStyle = dangerMode ? '#ff0066' : '#00ffff';
     ctx.font = '10px "Press Start 2P"';
     ctx.textAlign = 'center';
     ctx.fillText('CPU', this.x, this.y + 2);
 
-    // LEDs de estado
     const ledColors = [
       healthPercent > 0.7 ? '#00ff66' : '#333',
       healthPercent > 0.4 ? '#ffff00' : '#333',
@@ -97,22 +77,18 @@ class CpuBase {
       ctx.fill();
     }
 
-    // === BARRA DE SALUD MEJORADA ===
     const barWidth = 100;
     const barHeight = 10;
     const barX = this.x - barWidth / 2;
     const barY = this.y + 30;
 
-    // Fondo de la barra
     ctx.fillStyle = '#1a1a2a';
     ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-    // Borde
     ctx.strokeStyle = dangerMode ? '#ff0066' : '#00ffff';
     ctx.lineWidth = 1;
     ctx.strokeRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-    // Relleno de salud con gradiente
     const healthGrad = ctx.createLinearGradient(barX, barY, barX + barWidth * healthPercent, barY);
     if (healthPercent > 0.6) {
       healthGrad.addColorStop(0, '#00ff66');
@@ -130,7 +106,6 @@ class CpuBase {
     ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
     ctx.globalAlpha = 1;
 
-    // Texto de porcentaje
     ctx.fillStyle = '#ffffff';
     ctx.font = '6px "Press Start 2P"';
     ctx.fillText(`${Math.floor(this.health)}%`, this.x, barY + 8);
@@ -147,20 +122,17 @@ class PlayerTank {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    
-    // === FÍSICAS "ARCADE PRECISO" ===
+
     this.vx = 0; 
     this.vy = 0; 
-    
-    // Ajustes para evitar el "efecto hielo":
-    this.maxSpeed = 7;       // Velocidad tope ágil
-    this.acceleration = 2.0; // Respuesta inmediata al mover la palanca
-    this.friction = 0.70;    // Frenado fuerte (0.70 retiene menos velocidad que 0.85)
+
+    this.maxSpeed = 7;       
+    this.acceleration = 2.0; 
+    this.friction = 0.70;    
   }
 
   update(keys, w, h) {
-    // 1. ACELERACIÓN (Fuerza de movimiento)
-    // Si detectamos input, aplicamos fuerza en esa dirección
+    // 1. INPUT (Aceleración)
     let inputX = 0;
     let inputY = 0;
 
