@@ -194,17 +194,36 @@ function startSnake() {
 
     const pathLength = aiPath.length;
 
-    // Calculate uniform opacity based on path length
-    // Shorter paths (close to food) = more faded, longer paths = more visible
-    // Fades out when close (5 steps or less), max visibility at 30+ steps
-    const minSteps = 5;
-    const maxSteps = 30;
-    const minOpacity = 0.1;
-    const maxOpacity = 0.8;
-
-    // Normalize path length between minSteps and maxSteps
-    const normalizedLength = Math.max(0, Math.min((pathLength - minSteps) / (maxSteps - minSteps), 1));
-    const opacity = minOpacity + (normalizedLength * (maxOpacity - minOpacity));
+// Calculate opacity based on path length using defined thresholds
+    // Behavior table:
+    // 30+ steps = 100% (1.0)  - Very far, fully visible bright guide
+    // 15 steps  = 53%  (0.53) - Medium distance, semi-transparent
+    // 8 steps   = 16%  (0.16) - Close, very faint
+    // 5 steps   = 5%   (0.05) - Very close, nearly invisible
+    // 3 steps   = 1%   (0.01) - At fruit, completely invisible
+    let opacity;
+    if (pathLength >= 30) {
+      opacity = 1.0;
+    } else if (pathLength >= 15) {
+      // Interpolate between 15 (0.53) and 30 (1.0)
+      const t = (pathLength - 15) / (30 - 15);
+      opacity = 0.53 + t * (1.0 - 0.53);
+    } else if (pathLength >= 8) {
+      // Interpolate between 8 (0.16) and 15 (0.53)
+      const t = (pathLength - 8) / (15 - 8);
+      opacity = 0.16 + t * (0.53 - 0.16);
+    } else if (pathLength >= 5) {
+      // Interpolate between 5 (0.05) and 8 (0.16)
+      const t = (pathLength - 5) / (8 - 5);
+      opacity = 0.05 + t * (0.16 - 0.05);
+    } else if (pathLength >= 3) {
+      // Interpolate between 3 (0.01) and 5 (0.05)
+      const t = (pathLength - 3) / (5 - 3);
+      opacity = 0.01 + t * (0.05 - 0.01);
+    } else {
+      // Less than 3 steps, essentially invisible
+      opacity = 0.01;
+    }
 
     // Set uniform style for the entire path
     ctx.strokeStyle = `rgba(255, 180, 0, ${opacity})`;
