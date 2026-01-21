@@ -51,15 +51,70 @@
   <!-- Decoración izquierda -->
   <div class="side-decoration left">
     <div class="neon-owl">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path class="owl-body" d="M50,60 Q20,180 100,180 Q180,180 150,60 Q100,10 50,60 Z" fill="none" stroke="#00ff41"
-          stroke-width="4" />
-        <circle class="owl-eye" cx="70" cy="80" r="15" fill="none" stroke="#ff7b00" stroke-width="3" />
-        <circle class="owl-eye" cx="130" cy="80" r="15" fill="none" stroke="#ff7b00" stroke-width="3" />
-        <path class="owl-beak" d="M90,100 L110,100 L100,120 Z" fill="none" stroke="#ccff00" stroke-width="3" />
-        <path class="owl-wing" d="M40,100 Q10,130 40,160" fill="none" stroke="#00ff41" stroke-width="3" />
-        <path class="owl-wing" d="M160,100 Q190,130 160,160" fill="none" stroke="#00ff41" stroke-width="3" />
-      </svg>
+      <svg width="280" height="320" viewBox="0 0 280 320" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <!-- Efecto LED verde -->
+                <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur1" />
+                    <feGaussianBlur stdDeviation="6" result="blur2" />
+                    <feMerge>
+                        <feMergeNode in="blur2" />
+                        <feMergeNode in="blur1" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+
+                <!-- Efecto LED naranja -->
+                <filter id="glowOrange" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur1" />
+                    <feGaussianBlur stdDeviation="6" result="blur2" />
+                    <feMerge>
+                        <feMergeNode in="blur2" />
+                        <feMergeNode in="blur1" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- Contorno principal del búho - Verde -->
+            <g filter="url(#glowGreen)" fill="none" stroke="#39ff14" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <!-- Silueta del búho (cuerpo + cabeza + orejas en un solo trazo) -->
+                <path d="M60 180
+                         Q40 140 60 100
+                         L45 50
+                         L80 90
+                         Q100 70 140 70
+                         Q180 70 200 90
+                         L235 50
+                         L220 100
+                         Q240 140 220 180
+                         Q240 240 200 280
+                         Q140 310 80 280
+                         Q40 240 60 180 Z" />
+
+                <!-- Patas -->
+                <path d="M100 280 L85 300 M100 280 L100 305 M100 280 L115 300" />
+                <path d="M180 280 L165 300 M180 280 L180 305 M180 280 L195 300" />
+            </g>
+
+            <!-- Ojos y pico - Naranja -->
+            <g filter="url(#glowOrange)" fill="none" stroke="#ff6b35" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <!-- Ojo izquierdo -->
+                <circle cx="105" cy="130" r="25" />
+                <circle cx="105" cy="130" r="10" />
+
+                <!-- Ojo derecho -->
+                <circle cx="175" cy="130" r="25" />
+                <circle cx="175" cy="130" r="10" />
+
+                <!-- Pico -->
+                <path d="M130 160 L140 185 L150 160" />
+            </g>
+        </svg>
     </div>
   </div>
 
