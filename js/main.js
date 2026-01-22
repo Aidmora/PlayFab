@@ -540,7 +540,7 @@ playBtn.addEventListener('click', () => {
   //  ARCADE PRO
   if (currentListId === 'list-pro') {
     if (name.includes('feed the monster')) {
-      window.open('http://localhost:3000', '_blank');
+      window.open('https://web-feed-the-monster-ps1n.onrender.com', '_blank');
     } else if (name.includes('quizz') || name.includes('race')) {
       window.open('http://172.29.80.241:3000/', '_blank');
     } else {
